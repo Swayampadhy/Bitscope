@@ -204,89 +204,6 @@
         ]
       }
     },
-    "threat_intelligence": {
-      "risk_score": {
-        "type": "integer",
-        "description": "Calculated threat risk score (0-100)",
-        "values": ["0-100"]
-      },
-      "attack_techniques": {
-        "type": "array",
-        "description": "MITRE ATT&CK techniques identified",
-        "values": [
-          {
-            "technique_id": "<TID>",
-            "technique_name": "<Name>",
-            "tactic": "<Tactic>",
-            "confidence": "<0-1>"
-          }
-        ]
-      },
-      "threat_indicators": {
-        "type": "array",
-        "description": "Threat indicators detected",
-        "values": [
-          "remote_service_creation",
-          "privileged_interface_access",
-          "suspicious_operation"
-        ]
-      },
-      "attack_pattern": {
-        "type": "string",
-        "description": "Identified attack pattern",
-        "values": [
-          "PSExec",
-          "WMI lateral movement",
-          "DCSync",
-          "Golden Ticket",
-          "Silver Ticket",
-          "Remote registry access",
-          "Print spooler abuse",
-          "Task scheduler abuse"
-        ]
-      },
-      "ioc_matches": {
-        "type": "array",
-        "description": "Matching indicators of compromise",
-        "values": [
-          {
-            "ioc_type": "interface_uuid",
-            "ioc_value": "<UUID>",
-            "description": "Service Control Manager interface"
-          }
-        ]
-      }
-    },
-    "behavioral_analysis": {
-      "is_anomalous": {
-        "type": "boolean",
-        "description": "Whether behavior is anomalous",
-        "values": [true, false]
-      },
-      "anomaly_reasons": {
-        "type": "array",
-        "description": "Reasons for anomaly classification",
-        "values": [
-          "rare_operation_for_source",
-          "unusual_time_of_day",
-          "high_privilege_operation"
-        ]
-      },
-      "baseline_deviation": {
-        "type": "float",
-        "description": "Deviation from normal baseline (0-1)",
-        "values": ["0.0-1.0"]
-      },
-      "frequency_analysis": {
-        "type": "object",
-        "description": "Frequency analysis results",
-        "values": {
-          "operation_frequency": ["common", "rare"],
-          "source_frequency": ["first_time", "common"],
-          "time_frequency": ["business_hours", "off_hours"]
-        }
-      }
-    },
     "payload_analysis": {
       "payload_size": {
         "type": "integer",
@@ -422,59 +339,6 @@
         ]
       }
     },
-    "compliance_flags": {
-      "requires_audit": {
-        "type": "boolean",
-        "description": "Whether this event requires audit logging",
-        "values": [true, false]
-      },
-      "sensitive_operation": {
-        "type": "boolean",
-        "description": "Whether operation is considered sensitive",
-        "values": [true, false]
-      },
-      "privileged_access": {
-        "type": "boolean",
-        "description": "Whether operation requires privileged access",
-        "values": [true, false]
-      },
-      "regulatory_relevant": {
-        "type": "array",
-        "description": "Relevant regulatory frameworks",
-        "values": [
-          "SOX",
-          "HIPAA",
-          "PCI-DSS"
-        ]
-      }
-    },
-    "detection_metadata": {
-      "detection_rules_triggered": {
-        "type": "array",
-        "description": "Security rules that triggered on this event",
-        "values": [
-          {
-            "rule_id": "<rule_id>",
-            "rule_name": "<rule_name>",
-            "severity": ["low", "medium", "high", "critical"],
-            "confidence": ["0.0-1.0"]
-          }
-        ]
-      },
-      "false_positive_likelihood": {
-        "type": "float",
-        "description": "Likelihood this is a false positive (0-1)",
-        "values": ["0.0-1.0"]
-      },
-      "suppression_reasons": {
-        "type": "array",
-        "description": "Reasons this alert might be suppressed",
-        "values": [
-          "known_admin_tool",
-          "scheduled_maintenance"
-        ]
-      }
-    },
     "raw_evidence": {
       "rpc_header_hex": {
         "type": "string",
@@ -490,6 +354,92 @@
         "type": "string",
         "description": "SHA256 hash of the packet",
         "values": ["<64-char hex>"]
+      }
+    },
+
+// This below is done by the optional threat intelligence module. 
+    
+    "threat_intelligence": {
+      "risk_score": {
+        "type": "integer",
+        "description": "Calculated threat risk score (0-100)",
+        "values": ["0-100"]
+      },
+      "attack_techniques": {
+        "type": "array",
+        "description": "MITRE ATT&CK techniques identified",
+        "values": [
+          {
+            "technique_id": "<TID>",
+            "technique_name": "<Name>",
+            "tactic": "<Tactic>",
+            "confidence": "<0-1>"
+          }
+        ]
+      },
+      "threat_indicators": {
+        "type": "array",
+        "description": "Threat indicators detected",
+        "values": [
+          "remote_service_creation",
+          "privileged_interface_access",
+          "suspicious_operation"
+        ]
+      },
+      "attack_pattern": {
+        "type": "string",
+        "description": "Identified attack pattern",
+        "values": [
+          "PSExec",
+          "WMI lateral movement",
+          "DCSync",
+          "Golden Ticket",
+          "Silver Ticket",
+          "Remote registry access",
+          "Print spooler abuse",
+          "Task scheduler abuse"
+        ]
+      },
+      "ioc_matches": {
+        "type": "array",
+        "description": "Matching indicators of compromise",
+        "values": [
+          {
+            "ioc_type": "interface_uuid",
+            "ioc_value": "<UUID>",
+            "description": "Service Control Manager interface"
+          }
+        ]
+      }
+    },
+    "behavioral_analysis": {
+      "is_anomalous": {
+        "type": "boolean",
+        "description": "Whether behavior is anomalous",
+        "values": [true, false]
+      },
+      "anomaly_reasons": {
+        "type": "array",
+        "description": "Reasons for anomaly classification",
+        "values": [
+          "rare_operation_for_source",
+          "unusual_time_of_day",
+          "high_privilege_operation"
+        ]
+      },
+      "baseline_deviation": {
+        "type": "float",
+        "description": "Deviation from normal baseline (0-1)",
+        "values": ["0.0-1.0"]
+      },
+      "frequency_analysis": {
+        "type": "object",
+        "description": "Frequency analysis results",
+        "values": {
+          "operation_frequency": ["common", "rare"],
+          "source_frequency": ["first_time", "common"],
+          "time_frequency": ["business_hours", "off_hours"]
+        }
       }
     }
   }
