@@ -1,0 +1,496 @@
+{
+  "rpc_packet_analysis": {
+    "event_metadata": {
+      "event_id": {
+        "type": "string",
+        "description": "Unique event identifier",
+        "values": ["rpc_<UUID>"]
+      },
+      "timestamp": {
+        "type": "string",
+        "description": "Event timestamp in UTC",
+        "values": ["<ISO8601 timestamp>"]
+      },
+      "event_type": {
+        "type": "string",
+        "description": "Type of RPC event detected",
+        "values": [
+          "rpc_request",
+          "rpc_response",
+          "rpc_bind",
+          "rpc_fault",
+          "rpc_auth"
+        ]
+      },
+      "severity": {
+        "type": "string",
+        "description": "Event severity level",
+        "values": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ]
+      }
+    },
+    "network_information": {
+      "source_ip": {
+        "type": "string",
+        "description": "Source IP address",
+        "values": ["<IPv4 or IPv6>"]
+      },
+      "source_port": {
+        "type": "integer",
+        "description": "Source port number",
+        "values": ["1-65535"]
+      },
+      "destination_ip": {
+        "type": "string",
+        "description": "Destination IP address",
+        "values": ["<IPv4 or IPv6>"]
+      },
+      "destination_port": {
+        "type": "integer",
+        "description": "Destination port number",
+        "values": ["1-65535"]
+      },
+      "protocol": {
+        "type": "string",
+        "description": "Transport protocol",
+        "values": [
+          "TCP",
+          "UDP"
+        ]
+      },
+      "direction": {
+        "type": "string",
+        "description": "Communication direction",
+        "values": [
+          "inbound",
+          "outbound",
+          "lateral"
+        ]
+      }
+    },
+    "rpc_details": {
+      "interface_uuid": {
+        "type": "string",
+        "description": "RPC interface UUID",
+        "values": ["<UUID>"]
+      },
+      "interface_name": {
+        "type": "string",
+        "description": "Human-readable interface name",
+        "values": [
+          "Service Control Manager",
+          "Task Scheduler",
+          "Server Service",
+          "Workstation Service",
+          "Print Spooler",
+          "Registry",
+          "DRSUAPI",
+          "SAMR",
+          "LSARPC",
+          "Unknown"
+        ]
+      },
+      "operation_number": {
+        "type": "integer",
+        "description": "RPC operation number",
+        "values": ["0-65535"]
+      },
+      "operation_name": {
+        "type": "string",
+        "description": "Human-readable operation name",
+        "values": ["<operation name>"]
+      },
+      "rpc_version": {
+        "type": "integer",
+        "description": "RPC protocol version",
+        "values": [4, 5]
+      },
+      "packet_type": {
+        "type": "string",
+        "description": "RPC packet type",
+        "values": [
+          "request",
+          "response",
+          "bind",
+          "bind_ack",
+          "bind_nak",
+          "fault",
+          "alter_context"
+        ]
+      },
+      "call_id": {
+        "type": "integer",
+        "description": "RPC call identifier for correlation",
+        "values": ["0-4294967295"]
+      },
+      "fragment_flags": {
+        "type": "array",
+        "description": "RPC fragmentation flags",
+        "values": [
+          "first_fragment",
+          "last_fragment"
+        ]
+      }
+    },
+    "transport_context": {
+      "transport_type": {
+        "type": "string",
+        "description": "RPC transport mechanism",
+        "values": [
+          "tcp",
+          "udp",
+          "named_pipe",
+          "alpc",
+          "http"
+        ]
+      },
+      "named_pipe": {
+        "type": "string",
+        "description": "Named pipe path if applicable",
+        "values": ["\\\\pipe\\\\<name>"]
+      },
+      "smb_tree_id": {
+        "type": "integer",
+        "description": "SMB tree identifier for named pipe transport",
+        "values": ["0-65535"]
+      },
+      "smb_session_id": {
+        "type": "integer",
+        "description": "SMB session identifier",
+        "values": ["0-4294967295"]
+      }
+    },
+    "authentication_context": {
+      "auth_present": {
+        "type": "boolean",
+        "description": "Whether authentication is present",
+        "values": [true, false]
+      },
+      "auth_type": {
+        "type": "string",
+        "description": "Authentication mechanism",
+        "values": [
+          "None",
+          "Kerberos",
+          "NTLM",
+          "Schannel",
+          "DCE"
+        ]
+      },
+      "auth_level": {
+        "type": "string",
+        "description": "Authentication protection level",
+        "values": [
+          "none",
+          "connect",
+          "call",
+          "packet",
+          "packet_integrity",
+          "packet_privacy"
+        ]
+      },
+      "impersonation_level": {
+        "type": "string",
+        "description": "Client impersonation level",
+        "values": [
+          "anonymous",
+          "identification",
+          "impersonation",
+          "delegation"
+        ]
+      }
+    },
+    "threat_intelligence": {
+      "risk_score": {
+        "type": "integer",
+        "description": "Calculated threat risk score (0-100)",
+        "values": ["0-100"]
+      },
+      "attack_techniques": {
+        "type": "array",
+        "description": "MITRE ATT&CK techniques identified",
+        "values": [
+          {
+            "technique_id": "<TID>",
+            "technique_name": "<Name>",
+            "tactic": "<Tactic>",
+            "confidence": "<0-1>"
+          }
+        ]
+      },
+      "threat_indicators": {
+        "type": "array",
+        "description": "Threat indicators detected",
+        "values": [
+          "remote_service_creation",
+          "privileged_interface_access",
+          "suspicious_operation"
+        ]
+      },
+      "attack_pattern": {
+        "type": "string",
+        "description": "Identified attack pattern",
+        "values": [
+          "PSExec",
+          "WMI lateral movement",
+          "DCSync",
+          "Golden Ticket",
+          "Silver Ticket",
+          "Remote registry access",
+          "Print spooler abuse",
+          "Task scheduler abuse"
+        ]
+      },
+      "ioc_matches": {
+        "type": "array",
+        "description": "Matching indicators of compromise",
+        "values": [
+          {
+            "ioc_type": "interface_uuid",
+            "ioc_value": "<UUID>",
+            "description": "Service Control Manager interface"
+          }
+        ]
+      }
+    },
+    "behavioral_analysis": {
+      "is_anomalous": {
+        "type": "boolean",
+        "description": "Whether behavior is anomalous",
+        "values": [true, false]
+      },
+      "anomaly_reasons": {
+        "type": "array",
+        "description": "Reasons for anomaly classification",
+        "values": [
+          "rare_operation_for_source",
+          "unusual_time_of_day",
+          "high_privilege_operation"
+        ]
+      },
+      "baseline_deviation": {
+        "type": "float",
+        "description": "Deviation from normal baseline (0-1)",
+        "values": ["0.0-1.0"]
+      },
+      "frequency_analysis": {
+        "type": "object",
+        "description": "Frequency analysis results",
+        "values": {
+          "operation_frequency": ["common", "rare"],
+          "source_frequency": ["first_time", "common"],
+          "time_frequency": ["business_hours", "off_hours"]
+        }
+      }
+    },
+    "payload_analysis": {
+      "payload_size": {
+        "type": "integer",
+        "description": "Size of RPC payload in bytes",
+        "values": ["0-<MTU>"]
+      },
+      "contains_sensitive_data": {
+        "type": "boolean",
+        "description": "Whether payload contains potentially sensitive data",
+        "values": [true, false]
+      },
+      "encryption_detected": {
+        "type": "boolean",
+        "description": "Whether payload appears encrypted",
+        "values": [true, false]
+      },
+      "suspicious_patterns": {
+        "type": "array",
+        "description": "Suspicious patterns in payload",
+        "values": [
+          "possible_shellcode",
+          "encoded_powershell",
+          "credential_strings"
+        ]
+      },
+      "string_analysis": {
+        "type": "object",
+        "description": "Analysis of strings in payload",
+        "values": {
+          "contains_unicode": [true, false],
+          "contains_base64": [true, false],
+          "contains_urls": [true, false],
+          "contains_file_paths": [true, false]
+        }
+      }
+    },
+    "session_context": {
+      "session_id": {
+        "type": "string",
+        "description": "Session identifier for correlation",
+        "values": ["<src>:<sport>-><dst>:<dport>"]
+      },
+      "conversation_id": {
+        "type": "string",
+        "description": "RPC conversation identifier",
+        "values": ["rpc_conv_<hash>"]
+      },
+      "is_new_session": {
+        "type": "boolean",
+        "description": "Whether this is a new RPC session",
+        "values": [true, false]
+      },
+      "session_duration": {
+        "type": "float",
+        "description": "Duration of current session in seconds",
+        "values": ["0.0-<max>"]
+      },
+      "packet_count_in_session": {
+        "type": "integer",
+        "description": "Number of packets in this session",
+        "values": ["0-<max>"]
+      }
+    },
+    "process_context": {
+      "likely_client_process": {
+        "type": "string",
+        "description": "Likely client process name based on behavior",
+        "values": [
+          "powershell.exe",
+          "cmd.exe",
+          "sc.exe",
+          "net.exe",
+          "psexec.exe",
+          "wmic.exe",
+          "rundll32.exe",
+          "regsvr32.exe",
+          "mshta.exe",
+          "unknown"
+        ]
+      },
+      "likely_server_process": {
+        "type": "string",
+        "description": "Likely server process name based on interface",
+        "values": [
+          "services.exe",
+          "lsass.exe",
+          "winlogon.exe",
+          "svchost.exe",
+          "spoolsv.exe",
+          "taskschd.exe",
+          "unknown"
+        ]
+      },
+      "execution_context": {
+        "type": "string",
+        "description": "Execution context classification",
+        "values": [
+          "user",
+          "administrative",
+          "system",
+          "service"
+        ]
+      }
+    },
+    "geolocation": {
+      "source_country": {
+        "type": "string",
+        "description": "Source IP country",
+        "values": ["<country name>"]
+      },
+      "source_asn": {
+        "type": "integer",
+        "description": "Source IP ASN",
+        "values": ["<ASN>"]
+      },
+      "is_internal_communication": {
+        "type": "boolean",
+        "description": "Whether communication is internal to network",
+        "values": [true, false]
+      },
+      "is_cross_border": {
+        "type": "boolean",
+        "description": "Whether communication crosses country borders",
+        "values": [true, false]
+      },
+      "geographic_risk": {
+        "type": "string",
+        "description": "Geographic risk assessment",
+        "values": [
+          "low",
+          "medium",
+          "high"
+        ]
+      }
+    },
+    "compliance_flags": {
+      "requires_audit": {
+        "type": "boolean",
+        "description": "Whether this event requires audit logging",
+        "values": [true, false]
+      },
+      "sensitive_operation": {
+        "type": "boolean",
+        "description": "Whether operation is considered sensitive",
+        "values": [true, false]
+      },
+      "privileged_access": {
+        "type": "boolean",
+        "description": "Whether operation requires privileged access",
+        "values": [true, false]
+      },
+      "regulatory_relevant": {
+        "type": "array",
+        "description": "Relevant regulatory frameworks",
+        "values": [
+          "SOX",
+          "HIPAA",
+          "PCI-DSS"
+        ]
+      }
+    },
+    "detection_metadata": {
+      "detection_rules_triggered": {
+        "type": "array",
+        "description": "Security rules that triggered on this event",
+        "values": [
+          {
+            "rule_id": "<rule_id>",
+            "rule_name": "<rule_name>",
+            "severity": ["low", "medium", "high", "critical"],
+            "confidence": ["0.0-1.0"]
+          }
+        ]
+      },
+      "false_positive_likelihood": {
+        "type": "float",
+        "description": "Likelihood this is a false positive (0-1)",
+        "values": ["0.0-1.0"]
+      },
+      "suppression_reasons": {
+        "type": "array",
+        "description": "Reasons this alert might be suppressed",
+        "values": [
+          "known_admin_tool",
+          "scheduled_maintenance"
+        ]
+      }
+    },
+    "raw_evidence": {
+      "rpc_header_hex": {
+        "type": "string",
+        "description": "Raw RPC header in hex for forensics",
+        "values": ["<hex string>"]
+      },
+      "interface_signature": {
+        "type": "string",
+        "description": "RPC interface signature for correlation",
+        "values": ["<UUID>:<operation_number>"]
+      },
+      "packet_hash": {
+        "type": "string",
+        "description": "SHA256 hash of the packet",
+        "values": ["<64-char hex>"]
+      }
+    }
+  }
+}
