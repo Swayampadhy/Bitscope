@@ -411,36 +411,6 @@
           }
         ]
       }
-    },
-    "behavioral_analysis": {
-      "is_anomalous": {
-        "type": "boolean",
-        "description": "Whether behavior is anomalous",
-        "values": [true, false]
-      },
-      "anomaly_reasons": {
-        "type": "array",
-        "description": "Reasons for anomaly classification",
-        "values": [
-          "rare_operation_for_source",
-          "unusual_time_of_day",
-          "high_privilege_operation"
-        ]
-      },
-      "baseline_deviation": {
-        "type": "float",
-        "description": "Deviation from normal baseline (0-1)",
-        "values": ["0.0-1.0"]
-      },
-      "frequency_analysis": {
-        "type": "object",
-        "description": "Frequency analysis results",
-        "values": {
-          "operation_frequency": ["common", "rare"],
-          "source_frequency": ["first_time", "common"],
-          "time_frequency": ["business_hours", "off_hours"]
-        }
-      }
     }
   }
 }
