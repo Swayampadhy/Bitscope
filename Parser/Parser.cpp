@@ -1559,9 +1559,9 @@ public:
 int main(int argc, char* argv[]) {
     try {
 
-        // Initialize parser with MaxMind database paths (optional)
-        std::string geoip_path = (argc > 1) ? argv[1] : "/path/to/GeoLite2-City.mmdb";
-        std::string asn_path = (argc > 2) ? argv[2] : "/path/to/GeoLite2-ASN.mmdb";
+        // Initialize parser with MaxMind database paths
+        std::string geoip_path = "..\\..\\..\\GeoLite2-City.mmdb";
+        std::string asn_path = "..\\..\\..\\GeoLite2-ASN.mmdb";
 
         CompleteRPCParser parser(geoip_path, asn_path);
 
