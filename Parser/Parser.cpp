@@ -365,8 +365,20 @@ private:
 
     CIDRRange parse_cidr(const std::string& cidr) {
         size_t slash_pos = cidr.find('/');
+        if (slash_pos == std::string::npos) {
+            // Invalid CIDR format, return a default
+            return { 0, 0, "invalid" };
+        }
+        
         std::string ip_str = cidr.substr(0, slash_pos);
-        int prefix_len = std::stoi(cidr.substr(slash_pos + 1));
+        int prefix_len;
+        
+        try {
+            prefix_len = std::stoi(cidr.substr(slash_pos + 1));
+        } catch (const std::exception& e) {
+            // Invalid prefix length
+            return { 0, 0, "invalid" };
+        }
 
         uint32_t ip = ip_to_uint32(ip_str);
         uint32_t mask = (0xFFFFFFFF << (32 - prefix_len)) & 0xFFFFFFFF;
@@ -1844,39 +1856,59 @@ public:
         auto& rpc_analysis = event["rpc_packet_analysis"];
 
         // Basic network parsing
-        std::string src_ip, dst_ip, protocol;
+        std::string src_ip = "0.0.0.0", dst_ip = "0.0.0.0", protocol = "unknown";
         int src_port = 0, dst_port = 0;
-
+        
+        // Validate network layer exists
+        bool has_valid_network_layer = false;
+        
         if (parsedPacket.isPacketOfType(pcpp::IPv4)) {
             auto ipv4Layer = parsedPacket.getLayerOfType<pcpp::IPv4Layer>();
-            src_ip = ipv4Layer->getSrcIPAddress().toString();
-            dst_ip = ipv4Layer->getDstIPAddress().toString();
+            if (ipv4Layer != nullptr) {
+                src_ip = ipv4Layer->getSrcIPAddress().toString();
+                dst_ip = ipv4Layer->getDstIPAddress().toString();
+                has_valid_network_layer = true;
+            }
         }
         else if (parsedPacket.isPacketOfType(pcpp::IPv6)) {
             auto ipv6Layer = parsedPacket.getLayerOfType<pcpp::IPv6Layer>();
-            src_ip = ipv6Layer->getSrcIPAddress().toString();
-            dst_ip = ipv6Layer->getDstIPAddress().toString();
+            if (ipv6Layer != nullptr) {
+                src_ip = ipv6Layer->getSrcIPAddress().toString();
+                dst_ip = ipv6Layer->getDstIPAddress().toString();
+                has_valid_network_layer = true;
+            }
         }
-
+        
+        // Validate transport layer exists
         if (parsedPacket.isPacketOfType(pcpp::TCP)) {
             auto tcpLayer = parsedPacket.getLayerOfType<pcpp::TcpLayer>();
-            src_port = tcpLayer->getSrcPort();
-            dst_port = tcpLayer->getDstPort();
-            protocol = "TCP";
+            if (tcpLayer != nullptr) {
+                src_port = tcpLayer->getSrcPort();
+                dst_port = tcpLayer->getDstPort();
+                protocol = "TCP";
+            }
         }
         else if (parsedPacket.isPacketOfType(pcpp::UDP)) {
             auto udpLayer = parsedPacket.getLayerOfType<pcpp::UdpLayer>();
-            src_port = udpLayer->getSrcPort();
-            dst_port = udpLayer->getDstPort();
-            protocol = "UDP";
+            if (udpLayer != nullptr) {
+                src_port = udpLayer->getSrcPort();
+                dst_port = udpLayer->getDstPort();
+                protocol = "UDP";
+            }
         }
 
-        // Perform geolocation analysis
+        // Perform geolocation analysis only if we have valid IPs
         GeolocationEngine::GeolocationInfo geo_info;
-        if (geo_engine) {
-            geo_info = geo_engine->analyze_communication(src_ip, dst_ip);
+        if (geo_engine && has_valid_network_layer && 
+            src_ip != "0.0.0.0" && dst_ip != "0.0.0.0") {
+            try {
+                geo_info = geo_engine->analyze_communication(src_ip, dst_ip);
+            } catch (const std::exception& e) {
+                std::cerr << "Geolocation analysis failed: " << e.what() << std::endl;
+                // Continue with default geo_info values
+            }
         }
-
+        
         // Enhanced network information with direction analysis
         std::string direction = determine_direction_with_geo(src_ip, dst_ip, geo_info);
 
