@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36511.14 d17.14
+VisualStudioVersion = 17.14.36511.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Parser", "Parser\Parser.vcxproj", "{A1B07200-90BB-458A-99F0-10104E2FEB61}"
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Packet Capture", "Packet Capture\Packet Capture.pyproj", "{27AD4E59-46C4-485B-9E58-2ED918D5526B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Alert", "Alert\Alert.vcxproj", "{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +37,18 @@ Global
 		{27AD4E59-46C4-485B-9E58-2ED918D5526B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27AD4E59-46C4-485B-9E58-2ED918D5526B}.Release|x64.ActiveCfg = Release|Any CPU
 		{27AD4E59-46C4-485B-9E58-2ED918D5526B}.Release|x86.ActiveCfg = Release|Any CPU
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Debug|Any CPU.Build.0 = Debug|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Debug|x64.ActiveCfg = Debug|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Debug|x64.Build.0 = Debug|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Debug|x86.ActiveCfg = Debug|Win32
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Debug|x86.Build.0 = Debug|Win32
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Release|Any CPU.ActiveCfg = Release|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Release|Any CPU.Build.0 = Release|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Release|x64.ActiveCfg = Release|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Release|x64.Build.0 = Release|x64
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Release|x86.ActiveCfg = Release|Win32
+		{4D7AE84E-ABAA-4558-9BD9-CF6831946CD2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
