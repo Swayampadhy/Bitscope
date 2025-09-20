@@ -2073,13 +2073,13 @@ public:
 int main(int argc, char* argv[]) {
     try {
         // Initialize parser with MaxMind database paths
-        std::string geoip_path = "..\\..\\..\\GeoLite2-City.mmdb";
-        std::string asn_path = "..\\..\\..\\GeoLite2-ASN.mmdb";
+        std::string geoip_path = "..\\..\\GeoLite2-City.mmdb";
+        std::string asn_path = "..\\..\\GeoLite2-ASN.mmdb";
 
         CompleteRPCParser parser(geoip_path, asn_path);
 
         // Example: Read packet from file (For testing only)
-        std::string packet_file = (argc > 1) ? argv[1] : "rpc_packet.bin";
+        std::string packet_file = (argc > 1) ? argv[1] : "test_packet.bin";
         std::ifstream file(packet_file, std::ios::binary);
         if (!file) {
             std::cerr << "Cannot open packet file: " << packet_file << std::endl;
