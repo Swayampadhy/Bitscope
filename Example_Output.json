@@ -355,10 +355,7 @@
         "description": "SHA256 hash of the packet",
         "values": ["<64-char hex>"]
       }
-    },
-
-// This below is done by the optional threat intelligence module. 
-    
+    },   
     "threat_intelligence": {
       "risk_score": {
         "type": "integer",
