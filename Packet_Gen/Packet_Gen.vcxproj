@@ -24,6 +24,7 @@
     <ProjectGuid>{6c62f47f-f955-4606-b08f-e1e1df203432}</ProjectGuid>
     <RootNamespace>PacketGen</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Packet_Gen (For testing only)</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
