@@ -24,6 +24,15 @@
 #include <sstream>
 #include <cstring>
 
+// Add threading support
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <queue>
+#include <future>
+#include <atomic>
+#include <functional>
+
 // Platform-specific includes for networking
 #ifdef _WIN32
 #include <winsock2.h>
@@ -47,6 +56,77 @@
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
+
+class ThreadPool {
+private:
+    std::vector<std::thread> workers;
+    std::queue<std::function<void()>> tasks;
+    std::mutex queue_mutex;
+    std::condition_variable condition;
+    bool stop;
+
+public:
+    ThreadPool(size_t threads) : stop(false) {
+        for (size_t i = 0; i < threads; ++i) {
+            workers.emplace_back([this] {
+                while (true) {
+                    std::function<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock(this->queue_mutex);
+                        this->condition.wait(lock, [this] {
+                            return this->stop || !this->tasks.empty();
+                            });
+
+                        if (this->stop && this->tasks.empty()) {
+                            return;
+                        }
+
+                        task = std::move(this->tasks.front());
+                        this->tasks.pop();
+                    }
+                    task();
+                }
+                });
+        }
+    }
+
+    template<class F, class... Args>
+    auto enqueue(F&& f, Args&&... args)
+        -> std::future<typename std::result_of<F(Args...)>::type> {
+        using return_type = typename std::result_of<F(Args...)>::type;
+
+        auto task = std::make_shared<std::packaged_task<return_type()>>(
+            std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+        );
+
+        std::future<return_type> res = task->get_future();
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            if (stop) {
+                throw std::runtime_error("enqueue on stopped ThreadPool");
+            }
+            tasks.emplace([task]() { (*task)(); });
+        }
+        condition.notify_one();
+        return res;
+    }
+
+    size_t queue_size() {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        return tasks.size();
+    }
+
+    ~ThreadPool() {
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            stop = true;
+        }
+        condition.notify_all();
+        for (std::thread& worker : workers) {
+            worker.join();
+        }
+    }
+};
 
 // #pragma pack for MSVC compatibility
 #pragma pack(push, 1)
@@ -960,6 +1040,7 @@ private:
     NetworkTopology network_topology;
     bool geoip_db_loaded;
     bool asn_db_loaded;
+    std::mutex geo_mutex;
 
     // Parse MaxMind database entry data into JSON
     json parse_mmdb_entry_data_list(MMDB_entry_data_list_s* entry_data_list) {
@@ -1189,6 +1270,8 @@ private:
             return result;
         }
 
+        std::lock_guard<std::mutex> lock(geo_mutex);
+
         int gai_error, mmdb_error;
         MMDB_lookup_result_s lookup_result = MMDB_lookup_string(geoip_db.get(), ip.c_str(), &gai_error, &mmdb_error);
 
@@ -1215,6 +1298,8 @@ private:
         if (!asn_db_loaded || !asn_db) {
             return result;
         }
+
+        std::lock_guard<std::mutex> lock(geo_mutex);
 
         int gai_error, mmdb_error;
         MMDB_lookup_result_s lookup_result = MMDB_lookup_string(asn_db.get(), ip.c_str(), &gai_error, &mmdb_error);
@@ -1503,6 +1588,7 @@ private:
     ThreatIntelligence threat_intel;
     ThreatIntelligenceEngine threat_intel_engine;
     std::map<std::string, SessionInfo> session_tracker;
+    std::mutex session_mutex;
 
     // Helper methods
     std::string generate_uuid() {
@@ -1731,6 +1817,8 @@ private:
 
         std::string session_key = src_ip + ":" + std::to_string(src_port) +
             "->" + dst_ip + ":" + std::to_string(dst_port);
+
+        std::lock_guard<std::mutex> lock(session_mutex);
 
         auto it = session_tracker.find(session_key);
         if (it == session_tracker.end()) {
@@ -2108,23 +2196,91 @@ int main(int argc, char* argv[]) {
         std::string geoip_path = "..\\..\\GeoLite2-City.mmdb";
         std::string asn_path = "..\\..\\GeoLite2-ASN.mmdb";
 
+        // Create the RPC parser
         CompleteRPCParser parser(geoip_path, asn_path);
 
-        // Example: Read packet from file (For testing only)
-        std::string packet_file = (argc > 1) ? argv[1] : "test_packet.bin";
-        std::ifstream file(packet_file, std::ios::binary);
-        if (!file) {
-            std::cerr << "Cannot open packet file: " << packet_file << std::endl;
+        // Create a thread pool with hardware concurrency
+        unsigned int num_threads = std::thread::hardware_concurrency();
+        if (num_threads == 0) num_threads = 4; // Default if hardware concurrency detection fails
+
+        std::cout << "Initializing thread pool with " << num_threads << " threads" << std::endl;
+        ThreadPool pool(num_threads);
+
+        // Check command line arguments
+        if (argc < 2) {
+            std::cerr << "Usage: " << argv[0] << " <packet1.bin> [packet2.bin] [packet3.bin] ..." << std::endl;
             return 1;
         }
 
-        std::vector<uint8_t> packet_data((std::istreambuf_iterator<char>(file)),
-            std::istreambuf_iterator<char>());
+        // Container for all results
+        json all_results = json::array();
+        std::mutex results_mutex;
 
-        json result = parser.parse_packet(packet_data.data(), packet_data.size());
+        // Vector to hold futures
+        std::vector<std::future<json>> futures;
 
-        std::cout << std::setw(4) << result << std::endl;
+        // Process each packet file in parallel
+        for (int i = 1; i < argc; ++i) {
+            std::string packet_file = argv[i];
 
+            std::cout << "Queuing packet file for processing: " << packet_file << std::endl;
+
+            futures.push_back(pool.enqueue([packet_file, &parser]() {
+                try {
+                    // Read packet data
+                    std::ifstream file(packet_file, std::ios::binary);
+                    if (!file) {
+                        std::cerr << "Thread error: Cannot open packet file: " << packet_file << std::endl;
+                        return json();
+                    }
+
+                    std::vector<uint8_t> packet_data((std::istreambuf_iterator<char>(file)),
+                        std::istreambuf_iterator<char>());
+
+                    if (packet_data.empty()) {
+                        std::cerr << "Thread warning: Empty packet file: " << packet_file << std::endl;
+                        return json();
+                    }
+
+                    // Parse the packet
+                    json result = parser.parse_packet(packet_data.data(), packet_data.size());
+
+                    // Add source file information
+                    result["source_file"] = packet_file;
+
+                    std::cout << "Completed processing: " << packet_file << std::endl;
+                    return result;
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "Thread exception processing " << packet_file << ": " << e.what() << std::endl;
+                    return json();
+                }
+                }));
+        }
+
+        // Collect results from all threads
+        std::cout << "Waiting for all packet processing to complete..." << std::endl;
+
+        for (auto& future : futures) {
+            json result = future.get();
+            if (!result.empty()) {
+                std::lock_guard<std::mutex> lock(results_mutex);
+                all_results.push_back(result);
+            }
+        }
+
+        // Write aggregated results to output file
+        std::string output_file = "packet_analysis_results.json";
+        std::ofstream out_file(output_file);
+        if (out_file) {
+            out_file << std::setw(4) << all_results << std::endl;
+            std::cout << "Analysis complete. Results written to " << output_file << std::endl;
+        }
+        else {
+            std::cerr << "Error: Unable to write to output file " << output_file << std::endl;
+            // Print to console as fallback
+            std::cout << std::setw(4) << all_results << std::endl;
+        }
     }
     catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
