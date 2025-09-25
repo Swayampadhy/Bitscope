@@ -272,7 +272,7 @@ std::unordered_map<std::string, std::string> uuid_to_interface = {
     {"12345678-1234-abcd-ef00-0123456789st", "SQL Server Browser"},
 
     // Legacy & Vulnerable Services
-    {"4d36e972-e325-11ce-bfc1-08002be10318", "Plug and Play"}, // PnP vulnerabilities
+    {"4d36e972-e325-11ce-bfc1-08002be10318", "Plug and Play"}, 
     {"12345678-1234-abcd-ef00-0123456789uv", "Telephony Service"},
     {"8d0ffe72-d252-11d0-bf8f-00c04fd9126b", "Windows Time Service"}
 };
@@ -2212,16 +2212,14 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        // Container for all results
-        json all_results = json::array();
-        std::mutex results_mutex;
-
         // Vector to hold futures
         std::vector<std::future<json>> futures;
+        std::vector<std::string> input_files;
 
         // Process each packet file in parallel
         for (int i = 1; i < argc; ++i) {
             std::string packet_file = argv[i];
+            input_files.push_back(packet_file);
 
             std::cout << "Queuing packet file for processing: " << packet_file << std::endl;
 
@@ -2255,32 +2253,49 @@ int main(int argc, char* argv[]) {
                     std::cerr << "Thread exception processing " << packet_file << ": " << e.what() << std::endl;
                     return json();
                 }
-                }));
+            }));
         }
 
-        // Collect results from all threads
+        // Collect and save results from all threads to individual files
         std::cout << "Waiting for all packet processing to complete..." << std::endl;
 
-        for (auto& future : futures) {
-            json result = future.get();
+        for (size_t i = 0; i < futures.size(); ++i) {
+            json result = futures[i].get();
             if (!result.empty()) {
-                std::lock_guard<std::mutex> lock(results_mutex);
-                all_results.push_back(result);
+                // Generate output filename based on input filename
+                std::string input_file = input_files[i];
+                std::string base_filename = input_file;
+                
+                // Extract just the filename without path
+                size_t last_separator = base_filename.find_last_of("/\\");
+                if (last_separator != std::string::npos) {
+                    base_filename = base_filename.substr(last_separator + 1);
+                }
+                
+                // Remove extension if present
+                size_t dot_pos = base_filename.find_last_of('.');
+                if (dot_pos != std::string::npos) {
+                    base_filename = base_filename.substr(0, dot_pos);
+                }
+                
+                std::string output_file = "analysis_" + base_filename + ".json";
+                
+                // Write this result to its own file
+                std::ofstream out_file(output_file);
+                if (out_file) {
+                    out_file << std::setw(4) << result << std::endl;
+                    std::cout << "Analysis complete. Results for " << input_file << " written to " << output_file << std::endl;
+                }
+                else {
+                    std::cerr << "Error: Unable to write to output file " << output_file << std::endl;
+                    // Print to console as fallback
+                    std::cout << "Analysis result for " << input_file << ":" << std::endl;
+                    std::cout << std::setw(4) << result << std::endl;
+                }
             }
         }
-
-        // Write aggregated results to output file
-        std::string output_file = "packet_analysis_results.json";
-        std::ofstream out_file(output_file);
-        if (out_file) {
-            out_file << std::setw(4) << all_results << std::endl;
-            std::cout << "Analysis complete. Results written to " << output_file << std::endl;
-        }
-        else {
-            std::cerr << "Error: Unable to write to output file " << output_file << std::endl;
-            // Print to console as fallback
-            std::cout << std::setw(4) << all_results << std::endl;
-        }
+        
+        std::cout << "All packet analyses completed and saved to individual files." << std::endl;
     }
     catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
