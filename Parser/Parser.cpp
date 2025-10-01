@@ -1,7 +1,7 @@
 // The Parser code of the project
 //
 // * -> You are here
-// Packet Capture -> *Parser/Threat Intelligence -> Alert -> Offline Storage
+// Packet Capture -> *Parser/Threat Intelligence -> Alert
 
 #define _CRT_SECURE_NO_WARNINGS 1
 
@@ -57,6 +57,7 @@
 
 using json = nlohmann::json;
 
+// ThreadPool implementation for concurrent processing
 class ThreadPool {
 private:
     std::vector<std::thread> workers;
@@ -90,6 +91,7 @@ public:
         }
     }
 
+	// Enqueue a new task
     template<class F, class... Args>
     auto enqueue(F&& f, Args&&... args)
         -> std::future<typename std::result_of<F(Args...)>::type> {
@@ -116,6 +118,7 @@ public:
         return tasks.size();
     }
 
+	// Destructor joins all threads
     ~ThreadPool() {
         {
             std::unique_lock<std::mutex> lock(queue_mutex);
@@ -400,16 +403,19 @@ private:
     };
 
 public:
+	// Calculate risk score based on country code
     int calculate_country_risk(const std::string& country_code) {
         auto it = country_risk_scores.find(country_code);
         return (it != country_risk_scores.end()) ? it->second : 30; // Default medium risk
     }
 
+	// Calculate risk score based on ASN
     int calculate_asn_risk(int asn) {
         auto it = asn_risk_scores.find(asn);
         return (it != asn_risk_scores.end()) ? it->second : 25; // Default low-medium risk
     }
 
+	// Check for cross-border geopolitical tensions
     bool is_cross_border_high_risk(const std::string& src_country, const std::string& dst_country) {
         auto it = geopolitical_tensions.find(dst_country);
         if (it != geopolitical_tensions.end()) {
@@ -418,6 +424,7 @@ public:
         return false;
     }
 
+	// Assess overall geographic risk
     std::string assess_geographic_risk(int country_risk, int asn_risk, bool cross_border_risk, bool is_internal) {
         if (is_internal) return "low";
 
@@ -443,6 +450,7 @@ private:
     std::vector<CIDRRange> dmz_networks;
     std::vector<CIDRRange> management_networks;
 
+	// Parse CIDR notation into network and mask
     CIDRRange parse_cidr(const std::string& cidr) {
         size_t slash_pos = cidr.find('/');
         if (slash_pos == std::string::npos) {
@@ -453,6 +461,7 @@ private:
         std::string ip_str = cidr.substr(0, slash_pos);
         int prefix_len;
         
+		// Convert prefix length to integer
         try {
             prefix_len = std::stoi(cidr.substr(slash_pos + 1));
         } catch (const std::exception& e) {
@@ -467,6 +476,7 @@ private:
         return { network, mask, "" };
     }
 
+	// Convert dotted-decimal IP to uint32
     uint32_t ip_to_uint32(const std::string& ip) {
         uint32_t result = 0;
         int shift = 24;
@@ -485,6 +495,7 @@ private:
         return result;
     }
 
+	// Initialize with common network ranges
 public:
     NetworkTopology() {
 
@@ -504,24 +515,28 @@ public:
         add_management_network("172.31.0.0/16", "Admin Network");
     }
 
+	// Add CIDR range to internal networks
     void add_internal_network(const std::string& cidr, const std::string& desc = "") {
         CIDRRange range = parse_cidr(cidr);
         range.description = desc;
         internal_networks.push_back(range);
     }
 
+	// Add CIDR range to DMZ networks
     void add_dmz_network(const std::string& cidr, const std::string& desc = "") {
         CIDRRange range = parse_cidr(cidr);
         range.description = desc;
         dmz_networks.push_back(range);
     }
-
+    
+	// Add CIDR range to management networks
     void add_management_network(const std::string& cidr, const std::string& desc = "") {
         CIDRRange range = parse_cidr(cidr);
         range.description = desc;
         management_networks.push_back(range);
     }
 
+	// Check if IP belongs to internal network
     bool is_internal_ip(const std::string& ip) {
         uint32_t addr = ip_to_uint32(ip);
         for (const auto& range : internal_networks) {
@@ -532,6 +547,7 @@ public:
         return false;
     }
 
+	// Check if IP belongs to DMZ network
     bool is_dmz_ip(const std::string& ip) {
         uint32_t addr = ip_to_uint32(ip);
         for (const auto& range : dmz_networks) {
@@ -542,6 +558,7 @@ public:
         return false;
     }
 
+	// Check if IP belongs to management network
     bool is_management_ip(const std::string& ip) {
         uint32_t addr = ip_to_uint32(ip);
         for (const auto& range : management_networks) {
@@ -552,6 +569,7 @@ public:
         return false;
     }
 
+	// Classify IP into network zone
     std::string classify_network_zone(const std::string& ip) {
         if (is_management_ip(ip)) return "management";
         if (is_internal_ip(ip)) return "internal";
@@ -677,6 +695,9 @@ private:
     };
 
 	// This database isn't comprehensive. More techniques can be added as needed.
+	// Refer to https://attack.mitre.org/ for a complete list.
+	// Also keep in mind that some techniques may overlap in indicators.
+
     std::vector<AttackTechnique> attack_techniques = {
         // Lateral Movement Techniques
         {"T1021.002", "Remote Services: SMB/Windows Admin Shares", "Lateral Movement",
@@ -748,6 +769,7 @@ private:
         {"payload_pattern", "psexec", "PSExec lateral movement", "Lateral Movement", 75}
     };
 
+	// Helper function to match IOCs
 public:
     struct ThreatIntelligenceResult {
         int risk_score;
@@ -757,6 +779,7 @@ public:
         std::vector<json> ioc_matches;
     };
 
+	// Analyze threat based on multiple inputs
     ThreatIntelligenceResult analyze_threat(
         const std::string& interface_uuid,
         int operation_number,
@@ -790,6 +813,7 @@ public:
     }
 
 private:
+	// Calculate risk score based on various factors
     int calculate_risk_score(const std::string& interface_uuid, int operation_number,
         const std::vector<std::string>& suspicious_patterns,
         const AuthInfo& auth_info, const std::string& source_country,
@@ -974,6 +998,7 @@ private:
         return indicators;
     }
 
+	// Identify known attack patterns based on interface and operation
     std::string identify_attack_pattern(const std::string& interface_uuid, int operation_number) {
         std::string operation_sig = interface_uuid + ":" + std::to_string(operation_number);
 
@@ -991,6 +1016,7 @@ private:
         return "Unknown";
     }
 
+	// Match Indicators of Compromise (IOCs)
     std::vector<json> match_iocs(const std::string& interface_uuid, int operation_number,
         const std::vector<std::string>& suspicious_patterns,
         const std::string& source_country, int source_asn) {
@@ -1017,6 +1043,7 @@ private:
                 }
             }
 
+			// If IOC matched, add to results
             if (match) {
                 json ioc_match = {
                     {"ioc_type", ioc.ioc_type},
@@ -1048,9 +1075,11 @@ private:
 
         if (!entry_data_list) return result;
 
+		// Recursive parsing of entry data
         MMDB_entry_data_list_s* current = entry_data_list;
         std::vector<std::string> path_stack;
 
+		// Traverse the linked list of entry data
         while (current) {
             MMDB_entry_data_s* data = &current->entry_data;
 
@@ -1236,6 +1265,7 @@ private:
         return geo_data;
     }
 
+	// ASN data extraction
     json extract_asn_data(MMDB_lookup_result_s& result) {
         json asn_data;
 
@@ -1263,6 +1293,7 @@ private:
         return asn_data;
     }
 
+	// IP lookup functions
     json lookup_ip_geolocation(const std::string& ip) {
         json result;
 
@@ -1292,6 +1323,7 @@ private:
         return result;
     }
 
+	// ASN lookup function
     json lookup_ip_asn(const std::string& ip) {
         json result;
 
@@ -1321,6 +1353,7 @@ private:
         return result;
     }
 
+	// Check if ISP is a known satellite provider
     bool is_satellite_provider(const std::string& isp_name) {
         std::vector<std::string> satellite_providers = {
             "Hughes", "Viasat", "HughesNet", "WildBlue", "Exede", "Intelsat",
@@ -1335,6 +1368,7 @@ private:
         return false;
     }
 
+	// Check if IP is an anonymous proxy
     bool is_anonymous_proxy(const json& geo_data) {
         // Check for anonymous proxy indicators in GeoIP data
         if (geo_data.contains("traits")) {
@@ -1345,6 +1379,7 @@ private:
         return false;
     }
 
+	// Check if ASN belongs to a known hosting provider
     bool is_hosting_provider(const std::string& isp_name, int asn) {
         // Common hosting provider keywords
         std::vector<std::string> hosting_keywords = {
@@ -1367,6 +1402,7 @@ private:
         return hosting_asns.count(asn) > 0;
     }
 
+	// Geolocation information structure
 public:
     struct GeolocationInfo {
         std::string source_country = "US";
@@ -1558,6 +1594,7 @@ public:
             "208.67.222.222" // OpenDNS
         };
 
+		// Perform lookups and display results
         for (const auto& ip : test_ips) {
             std::cout << "\nTesting IP: " << ip << std::endl;
 
@@ -1601,6 +1638,7 @@ private:
         return ss.str();
     }
 
+	// Get current timestamp in ISO 8601 format
     std::string get_iso8601_timestamp() {
         auto now = std::time(nullptr);
         auto utc = std::gmtime(&now);
@@ -1609,6 +1647,7 @@ private:
         return ss.str();
     }
 
+	// Convert bytes to hex string
     std::string bytes_to_hex(const uint8_t* data, size_t len) {
         std::stringstream ss;
         ss << std::hex << std::setfill('0');
@@ -1618,12 +1657,14 @@ private:
         return ss.str();
     }
 
+	// Compute SHA-256 hash of data
     std::string sha256_hash(const uint8_t* data, size_t len) {
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256(data, len, hash);
         return bytes_to_hex(hash, SHA256_DIGEST_LENGTH);
     }
 
+	// DCERPC header parsing
     bool parse_dcerpc_header(const uint8_t* payload, size_t len, DCERPCHeader& header) {
         if (len < sizeof(DCERPCHeader)) return false;
 
@@ -1638,6 +1679,7 @@ private:
         return true;
     }
 
+	// Extract interface UUID from payload
     std::string extract_interface_uuid(const uint8_t* payload, size_t len, size_t offset) {
         if (len < offset + 16) return "";
 
@@ -1717,6 +1759,7 @@ private:
             frequency[data[i]]++;
         }
 
+		// Calculate entropy
         double entropy = 0.0;
         for (auto it = frequency.begin(); it != frequency.end(); ++it) {
             auto byte = it->first;
@@ -1728,6 +1771,7 @@ private:
         return entropy;
     }
 
+	// Simple check for Unicode strings (UTF-16)
     bool has_unicode_strings(const uint8_t* data, size_t len) {
         // Simple check for UTF-16 patterns (every other byte is 0)
         int null_count = 0;
@@ -1840,6 +1884,7 @@ private:
         }
     }
 
+	// Direction determination with geolocation context
     std::string determine_direction_with_geo(const std::string& src_ip, const std::string& dst_ip,
         const GeolocationEngine::GeolocationInfo& geo_info) {
         // Enhanced direction analysis with geographic context
@@ -1861,6 +1906,7 @@ private:
         return "unknown";
     }
 
+	// Map RPC packet type to event type
     std::string get_event_type_from_packet(uint8_t packet_type) {
         // Map RPC packet types to event types
         switch (packet_type) {
@@ -1875,6 +1921,7 @@ private:
         }
     }
 
+	// Comprehensive severity calculation
     std::string calculate_severity(const std::string& geographic_risk,
         const std::vector<std::string>& suspicious_patterns,
         const AuthInfo& auth_info,
@@ -1919,6 +1966,7 @@ private:
         else return "low";
     }
 
+	// UUID to interface name mapping
 public:
     CompleteRPCParser(const std::string& geoip_db_path, const std::string& asn_db_path) {
         try {
@@ -1930,6 +1978,7 @@ public:
         }
     }
 
+	// Main packet parsing function
     json parse_packet(const uint8_t* packet_data, size_t packet_len) {
         // Parse with PcapPlusPlus
         timeval packetTime;
@@ -2042,6 +2091,7 @@ public:
                 call_id = rpc_header.call_id;
             }
 
+			// Map fragment flags to descriptive strings
             std::vector<std::string> fragment_flags;
             if (rpc_header.fragment_flags & 0x01) fragment_flags.push_back("first_fragment");
             if (rpc_header.fragment_flags & 0x02) fragment_flags.push_back("last_fragment");
@@ -2259,6 +2309,7 @@ int main(int argc, char* argv[]) {
         // Collect and save results from all threads to individual files
         std::cout << "Waiting for all packet processing to complete..." << std::endl;
 
+		// Save each result to its own file
         for (size_t i = 0; i < futures.size(); ++i) {
             json result = futures[i].get();
             if (!result.empty()) {
@@ -2297,6 +2348,8 @@ int main(int argc, char* argv[]) {
         
         std::cout << "All packet analyses completed and saved to individual files." << std::endl;
     }
+
+	// Global exception handling
     catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
