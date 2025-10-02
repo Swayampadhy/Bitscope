@@ -1647,14 +1647,17 @@ private:
         return ss.str();
     }
 
-	// Convert bytes to hex string
-    std::string bytes_to_hex(const uint8_t* data, size_t len) {
-        std::stringstream ss;
-        ss << std::hex << std::setfill('0');
+	// Optimized bytes_to_hex with pre-allocated memory
+    inline std::string bytes_to_hex(const uint8_t* data, size_t len) {
+        static const char hex_chars[] = "0123456789abcdef";
+        std::string result;
+        result.reserve(len * 2); // Pre-allocate memory to avoid reallocations
+        
         for (size_t i = 0; i < len; ++i) {
-            ss << std::setw(2) << static_cast<unsigned>(data[i]);
+            result.push_back(hex_chars[(data[i] >> 4) & 0xF]);
+            result.push_back(hex_chars[data[i] & 0xF]);
         }
-        return ss.str();
+        return result;
     }
 
 	// Compute SHA-256 hash of data
@@ -1752,22 +1755,26 @@ private:
         return analysis;
     }
 
-    // Shannon entropy calculation
-    double calculate_entropy(const uint8_t* data, size_t len) {
-        std::unordered_map<uint8_t, int> frequency;
+	// Optimized entropy calculation using static array
+    inline double calculate_entropy(const uint8_t* data, size_t len) {
+        if (len == 0) return 0.0;
+        
+        // Use static array instead of unordered_map for byte frequency counting
+        int counts[256] = {0};
         for (size_t i = 0; i < len; ++i) {
-            frequency[data[i]]++;
+            counts[data[i]]++;
         }
-
-		// Calculate entropy
+        
         double entropy = 0.0;
-        for (auto it = frequency.begin(); it != frequency.end(); ++it) {
-            auto byte = it->first;
-            auto count = it->second;
-            double probability = static_cast<double>(count) / len;
-            entropy -= probability * std::log2(probability);
+        const double log2_value = std::log(2.0); // Pre-calculate once
+        const double len_inv = 1.0 / len;        // Pre-calculate 1/len
+        
+        for (int i = 0; i < 256; ++i) {
+            if (counts[i] > 0) {
+                double p = counts[i] * len_inv;
+                entropy -= p * (std::log(p) / log2_value);
+            }
         }
-
         return entropy;
     }
 
