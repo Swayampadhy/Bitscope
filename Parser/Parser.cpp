@@ -1859,7 +1859,7 @@ private:
                     auth_info.impersonation_level = "delegation";
                 }
 
-                // Set enhanced authentication indicators
+                // Set   authentication indicators
                 auth_info.bypass_detected = (auth_type.find("bypass") != std::string::npos ||
                     auth_type.find("injection") != std::string::npos ||
                     auth_type.find("brute") != std::string::npos);
@@ -1940,7 +1940,7 @@ private:
 	// Direction determination with geolocation context
     std::string determine_direction_with_geo(const std::string& src_ip, const std::string& dst_ip,
         const GeolocationEngine::GeolocationInfo& geo_info) {
-        // Enhanced direction analysis with geographic context
+        //   direction analysis with geographic context
         if (geo_info.is_internal_communication) {
             if (geo_info.source_network_zone == "management" || geo_info.destination_network_zone == "management") {
                 return "management";
@@ -2099,19 +2099,19 @@ public:
             }
         }
         
-        // Enhanced network information with direction analysis
+        //   network information with direction analysis
         std::string direction = determine_direction_with_geo(src_ip, dst_ip, geo_info);
 
         rpc_analysis["network_information"] = {
-            {"source_ip", {{"type", "string"}, {"value", src_ip}}},
-            {"source_port", {{"type", "integer"}, {"value", src_port}}},
-            {"destination_ip", {{"type", "string"}, {"value", dst_ip}}},
-            {"destination_port", {{"type", "integer"}, {"value", dst_port}}},
-            {"protocol", {{"type", "string"}, {"value", protocol}}},
-            {"direction", {{"type", "string"}, {"value", direction}}}
+            {"source_ip", src_ip},
+            {"source_port", src_port},
+            {"destination_ip", dst_ip},
+            {"destination_port", dst_port},
+            {"protocol", protocol},
+            {"direction", direction}
         };
 
-        // Initialize variables for enhanced event metadata
+        // Initialize variables for   event metadata
         std::string event_type = "rpc_request";
         std::string severity = "low";
         std::string interface_name = "Unknown";
@@ -2123,7 +2123,7 @@ public:
             const uint8_t* payload = payloadLayer->getPayload();
             size_t payload_len = payloadLayer->getPayloadLen();
 
-            // Parse RPC details with enhanced interface/operation mapping
+            // Parse RPC details with   interface/operation mapping
             DCERPCHeader rpc_header = {};
             std::string interface_uuid;
 
@@ -2135,7 +2135,7 @@ public:
                 interface_name = uuid_to_interface.count(interface_uuid) ?
                     uuid_to_interface[interface_uuid] : "Unknown";
 
-                // Enhanced operation name lookup
+                //   operation name lookup
                 if (operation_mappings.count(interface_uuid) &&
                     operation_mappings[interface_uuid].count(rpc_header.operation_number)) {
                     operation_name = operation_mappings[interface_uuid][rpc_header.operation_number];
@@ -2150,45 +2150,45 @@ public:
             if (rpc_header.fragment_flags & 0x02) fragment_flags.push_back("last_fragment");
 
             rpc_analysis["rpc_details"] = {
-                {"interface_uuid", {{"type", "string"}, {"value", interface_uuid}}},
-                {"interface_name", {{"type", "string"}, {"value", interface_name}}},
-                {"operation_number", {{"type", "integer"}, {"value", rpc_header.operation_number}}},
-                {"operation_name", {{"type", "string"}, {"value", operation_name}}},
-                {"rpc_version", {{"type", "integer"}, {"value", rpc_header.version}}},
-                {"packet_type", {{"type", "string"}, {"value", packet_types.count(rpc_header.packet_type) ? packet_types[rpc_header.packet_type] : "unknown"}}},
-                {"call_id", {{"type", "integer"}, {"value", call_id}}},
-                {"fragment_flags", {{"type", "array"}, {"value", fragment_flags}}}
+                {"interface_uuid", interface_uuid},
+                {"interface_name", interface_name},
+                {"operation_number", rpc_header.operation_number},
+                {"operation_name", operation_name},
+                {"rpc_version", rpc_header.version},
+                {"packet_type", packet_types.count(rpc_header.packet_type) ? packet_types[rpc_header.packet_type] : "unknown"},
+                {"call_id", call_id},
+                {"fragment_flags", fragment_flags}
             };
 
-            // Enhanced transport context with SMB parsing
+            // Transport context with SMB parsing
             SMBInfo smb_info = parse_smb_layer(payload, payload_len);
 
             rpc_analysis["transport_context"] = {
-                {"transport_type", {{"type", "string"}, {"value", smb_info.is_smb_transport ? "named_pipe" : protocol}}},
-                {"named_pipe", {{"type", "string"}, {"value", smb_info.named_pipe}}},
-                {"smb_tree_id", {{"type", "integer"}, {"value", smb_info.tree_id}}},
-                {"smb_session_id", {{"type", "integer"}, {"value", smb_info.session_id}}}
+                {"transport_type", smb_info.is_smb_transport ? "named_pipe" : protocol},
+                {"named_pipe", smb_info.named_pipe},
+                {"smb_tree_id", smb_info.tree_id},
+                {"smb_session_id", smb_info.session_id}
             };
 
-            // Enhanced authentication context
+            //Authentication context
             AuthInfo auth_info = parse_auth_context(payload, payload_len);
 
             rpc_analysis["authentication_context"] = {
-                {"auth_present", {{"type", "boolean"}, {"value", auth_info.auth_present}}},
-                {"auth_type", {{"type", "string"}, {"value", auth_info.auth_type}}},
-                {"auth_level", {{"type", "string"}, {"value", auth_info.auth_level}}},
-                {"impersonation_level", {{"type", "string"}, {"value", auth_info.impersonation_level}}}
+                {"auth_present", auth_info.auth_present},
+                {"auth_type", auth_info.auth_type},
+                {"auth_level", auth_info.auth_level},
+                {"impersonation_level", auth_info.impersonation_level}
             };
 
-            // Enhanced payload analysis
+            //Payload analysis
             PayloadAnalysis payload_analysis = analyze_payload(payload, payload_len);
 
             rpc_analysis["payload_analysis"] = {
-                {"payload_size", {{"type", "integer"}, {"value", static_cast<int>(payload_len)}}},
-                {"contains_sensitive_data", {{"type", "boolean"}, {"value", payload_analysis.contains_sensitive_data}}},
-                {"encryption_detected", {{"type", "boolean"}, {"value", payload_analysis.encryption_detected}}},
-                {"suspicious_patterns", {{"type", "array"}, {"value", payload_analysis.suspicious_patterns}}},
-                {"string_analysis", {{"type", "object"}, {"value", {
+                {"payload_size", static_cast<int>(payload_len)},
+                {"contains_sensitive_data", payload_analysis.contains_sensitive_data},
+                {"encryption_detected", payload_analysis.encryption_detected},
+                {"suspicious_patterns", payload_analysis.suspicious_patterns},
+                {"string_analysis", {
                     {"contains_unicode", payload_analysis.string_analysis.contains_unicode},
                     {"contains_base64", payload_analysis.string_analysis.contains_base64},
                     {"contains_urls", payload_analysis.string_analysis.contains_urls},
@@ -2197,7 +2197,7 @@ public:
                     {"contains_credentials", payload_analysis.string_analysis.contains_credentials},
                     {"contains_powershell", payload_analysis.string_analysis.contains_powershell},
                     {"contains_executable_extensions", payload_analysis.string_analysis.contains_executable_extensions}
-                }}}}
+                }}
             };
 
 			// Threat Intelligence integration
@@ -2213,16 +2213,16 @@ public:
                 payload_analysis
             );
 
-            // threat intelligence section
+            //Threat intelligence section
             rpc_analysis["threat_intelligence"] = {
-                {"risk_score", {{"type", "integer"}, {"value", threat_result.risk_score}}},
-                {"attack_techniques", {{"type", "array"}, {"value", threat_result.attack_techniques}}},
-                {"threat_indicators", {{"type", "array"}, {"value", threat_result.threat_indicators}}},
-                {"attack_pattern", {{"type", "string"}, {"value", threat_result.attack_pattern}}},
-                {"ioc_matches", {{"type", "array"}, {"value", threat_result.ioc_matches}}}
+                {"risk_score", threat_result.risk_score},
+                {"attack_techniques", threat_result.attack_techniques},
+                {"threat_indicators", threat_result.threat_indicators},
+                {"attack_pattern", threat_result.attack_pattern},
+                {"ioc_matches", threat_result.ioc_matches}
             };
 
-            // Calculate enhanced severity using threat intelligence
+            // Calculate severity using threat intelligence
             severity = calculate_severity(
                 geo_info.geographic_risk,
                 payload_analysis.suspicious_patterns,
@@ -2233,58 +2233,49 @@ public:
                 threat_result.risk_score
             );
 
-            // Enhanced session context with tracking
+            // Session context with tracking
             SessionInfo& session = track_session(src_ip, src_port, dst_ip, dst_port, call_id);
             double session_duration = std::difftime(std::time(nullptr), session.start_time);
 
             rpc_analysis["session_context"] = {
-                {"session_id", {{"type", "string"}, {"value", session.session_id}}},
-                {"conversation_id", {{"type", "string"}, {"value", session.conversation_id}}},
-                {"is_new_session", {{"type", "boolean"}, {"value", session.is_new}}},
-                {"session_duration", {{"type", "float"}, {"value", session_duration}}},
-                {"packet_count_in_session", {{"type", "integer"}, {"value", session.packet_count}}}
+                {"session_id", session.session_id},
+                {"is_new_session", session.is_new},
+                {"session_duration", session_duration},
+                {"packet_count_in_session", session.packet_count}
             };
 
             // Raw evidence
             rpc_analysis["raw_evidence"] = {
-                {"rpc_header_hex", {{"type", "string"}, {"value", bytes_to_hex(payload, payload_len)}}},
-                {"interface_signature", {{"type", "string"}, {"value", interface_uuid + ":" + std::to_string(rpc_header.operation_number)}}},
-                {"packet_hash", {{"type", "string"}, {"value", sha256_hash(packet_data, packet_len)}}}
+                {"rpc_header_hex", bytes_to_hex(payload, payload_len)},
+                {"interface_signature", interface_uuid + ":" + std::to_string(rpc_header.operation_number)},
+                {"packet_hash", sha256_hash(packet_data, packet_len)}
             };
         }
 
-        // Enhanced event metadata with proper classification and severity
+        // Event metadata
         rpc_analysis["event_metadata"] = {
-            {"event_id", {{"type", "string"}, {"value", "rpc_" + generate_uuid()}}},
-            {"timestamp", {{"type", "string"}, {"value", get_iso8601_timestamp()}}},
-            {"event_type", {{"type", "string"}, {"value", event_type}}},
-            {"severity", {{"type", "string"}, {"value", severity}}}
+            {"timestamp", get_iso8601_timestamp()},
+            {"event_type", event_type},
+            {"severity", severity}
         };
 
-        // Process context (default values)
-        rpc_analysis["process_context"] = {
-            {"likely_client_process", {{"type", "string"}, {"value", "unknown"}}},
-            {"likely_server_process", {{"type", "string"}, {"value", "unknown"}}},
-            {"execution_context", {{"type", "string"}, {"value", "service"}}}
-        };
-
-        // Enhanced geolocation section
+        // Geolocation section
         if (geo_engine) {
             rpc_analysis["geolocation"] = {
-                {"source_country", {{"type", "string"}, {"value", geo_info.source_country}}},
-                {"source_asn", {{"type", "integer"}, {"value", geo_info.source_asn}}},
-                {"is_internal_communication", {{"type", "boolean"}, {"value", geo_info.is_internal_communication}}},
-                {"is_cross_border", {{"type", "boolean"}, {"value", geo_info.is_cross_border}}},
-                {"geographic_risk", {{"type", "string"}, {"value", geo_info.geographic_risk}}}
+                {"source_country", geo_info.source_country},
+                {"source_asn", geo_info.source_asn},
+                {"is_internal_communication", geo_info.is_internal_communication},
+                {"is_cross_border", geo_info.is_cross_border},
+                {"geographic_risk", geo_info.geographic_risk}
             };
         }
         else {
             rpc_analysis["geolocation"] = {
-                {"source_country", {{"type", "string"}, {"value", ""}}},
-                {"source_asn", {{"type", "integer"}, {"value", nullptr}}},
-                {"is_internal_communication", {{"type", "boolean"}, {"value", network_topology.is_internal_ip(src_ip) && network_topology.is_internal_ip(dst_ip)}}},
-                {"is_cross_border", {{"type", "boolean"}, {"value", false}}},
-                {"geographic_risk", {{"type", "string"}, {"value", "unknown"}}}
+                {"source_country", ""},
+                {"source_asn", nullptr},
+                {"is_internal_communication", network_topology.is_internal_ip(src_ip) && network_topology.is_internal_ip(dst_ip)},
+                {"is_cross_border", false},
+                {"geographic_risk", "unknown"}
             };
         }
 
@@ -2345,9 +2336,6 @@ int main(int argc, char* argv[]) {
 
                     // Parse the packet
                     json result = parser.parse_packet(packet_data.data(), packet_data.size());
-
-                    // Add source file information
-                    result["source_file"] = packet_file;
 
                     std::cout << "Completed processing: " << packet_file << std::endl;
                     return result;
