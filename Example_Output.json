@@ -7,10 +7,9 @@
             "impersonation_level": "anonymous"
         },
         "event_metadata": {
-            "event_id": "rpc_93e41c6e-2091-1b9b-36bc-7ce94edc677e",
             "event_type": "rpc_request",
             "severity": "high",
-            "timestamp": "2025-10-04T11:49:25Z"
+            "timestamp": "2025-10-04T12:22:11Z"
         },
         "geolocation": {
             "geographic_risk": "critical",
@@ -64,7 +63,6 @@
             "rpc_version": 5
         },
         "session_context": {
-            "conversation_id": "rpc_conv_4943719978345068786",
             "is_new_session": true,
             "packet_count_in_session": 1,
             "session_duration": 0.0,
