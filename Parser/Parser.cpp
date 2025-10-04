@@ -1918,9 +1918,7 @@ int main(int argc, char* argv[]) {
 
         // Create a thread pool with hardware concurrency
         unsigned int num_threads = std::thread::hardware_concurrency();
-        if (num_threads == 0) num_threads = 4; // Default if hardware concurrency detection fails
-
-        std::cout << "Initializing thread pool with " << num_threads << " threads" << std::endl;
+        if (num_threads == 0) num_threads = 4;
         ThreadPool pool(num_threads);
 
         // Check command line arguments
@@ -1937,8 +1935,6 @@ int main(int argc, char* argv[]) {
         for (int i = 1; i < argc; ++i) {
             std::string packet_file = argv[i];
             input_files.push_back(packet_file);
-
-            std::cout << "Queuing packet file for processing: " << packet_file << std::endl;
 
             futures.push_back(pool.enqueue([packet_file, &parser]() {
                 try {
@@ -1958,18 +1954,13 @@ int main(int argc, char* argv[]) {
                     }
 
                     json result = parser.parse_packet(packet_data.data(), packet_data.size());
-                    std::cout << "Completed processing: " << packet_file << std::endl;
                     return result;
                 }
                 catch (const std::exception& e) {
-                    std::cerr << "Thread exception processing " << packet_file << ": " << e.what() << std::endl;
                     return json();
                 }
             }));
         }
-
-        // Collect and save results from all threads to individual files
-        std::cout << "Waiting for all packet processing to complete..." << std::endl;
 
 		// Save each result to its own file
         for (size_t i = 0; i < futures.size(); ++i) {
@@ -1997,7 +1988,6 @@ int main(int argc, char* argv[]) {
                 std::ofstream out_file(output_file);
                 if (out_file) {
                     out_file << std::setw(4) << result << std::endl;
-                    std::cout << "Analysis complete. Results for " << input_file << " written to " << output_file << std::endl;
                 }
                 else {
                     std::cerr << "Error: Unable to write to output file " << output_file << std::endl;
@@ -2007,8 +1997,6 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-        
-        std::cout << "All packet analyses completed and saved to individual files." << std::endl;
     }
 
 	// Global exception handling
