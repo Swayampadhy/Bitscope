@@ -118,7 +118,7 @@ public:
         return tasks.size();
     }
 
-	// Destructor joins all threads
+	// Destructor
     ~ThreadPool() {
         {
             std::unique_lock<std::mutex> lock(queue_mutex);
@@ -195,7 +195,7 @@ struct SMBInfo {
     bool is_smb_transport = false;
 };
 
-// UUID to interface mapping - Attack-focused services
+// UUID to interface mapping
 std::unordered_map<std::string, std::string> uuid_to_interface = {
 
     // Core Windows Services - High Attack Value
@@ -212,7 +212,7 @@ std::unordered_map<std::string, std::string> uuid_to_interface = {
     {"12345778-1234-abcd-ef00-01234567cffb", "LSARPC"}, // LSA policy access
     {"c681d488-d850-11d0-8c52-00c04fd90f7e", "LSASS"}, // LSASS access
     {"12345678-1234-abcd-ef00-01234567cffb", "Netlogon"}, // Domain authentication
-    {"894de0c0-0d55-11d3-a322-00c04fa321a1", "Windows Management Instrumentation"},
+	{"894de0c0-0d55-11d3-a322-00c04fa321a1", "Windows Management Instrumentation"}, // WMI lateral movement
 
     // File System & Share Access
     {"4fc742e0-4a10-11cf-8273-00aa004ae673", "Distributed File System"},
@@ -580,105 +580,139 @@ public:
 
 // Threat intelligence patterns
 class ThreatIntelligence {
+private:
+    // Static compiled regex pattern members
+    static std::vector<std::pair<std::regex, std::string>> compiled_malware_signatures;
+    static std::vector<std::pair<std::regex, std::string>> compiled_auth_bypass_patterns;
+    static std::vector<std::pair<std::regex, std::string>> compiled_advanced_string_patterns;
+    static std::once_flag init_flag;
+
+    // Initialize all patterns
+    static void initialize_patterns() {
+        // Malware family signatures
+        compiled_malware_signatures = {
+            // APT & Nation State
+            {std::regex(R"(cobalt.*strike)", std::regex_constants::icase | std::regex_constants::optimize), "cobalt_strike"},
+            {std::regex(R"(mimikatz)", std::regex_constants::icase | std::regex_constants::optimize), "mimikatz_credential_dumper"},
+            {std::regex(R"(bloodhound)", std::regex_constants::icase | std::regex_constants::optimize), "bloodhound_recon"},
+            {std::regex(R"(sharphound)", std::regex_constants::icase | std::regex_constants::optimize), "sharphound_collector"},
+            {std::regex(R"(rubeus)", std::regex_constants::icase | std::regex_constants::optimize), "rubeus_kerberos_abuse"},
+            {std::regex(R"(powerview)", std::regex_constants::icase | std::regex_constants::optimize), "powerview_enumeration"},
+            {std::regex(R"(empire|powerempire)", std::regex_constants::icase | std::regex_constants::optimize), "powershell_empire"},
+            {std::regex(R"(metasploit|meterpreter)", std::regex_constants::icase | std::regex_constants::optimize), "metasploit_framework"},
+            {std::regex(R"(impacket)", std::regex_constants::icase | std::regex_constants::optimize), "impacket_tools"},
+            {std::regex(R"(secretsdump)", std::regex_constants::icase | std::regex_constants::optimize), "secrets_dumping"},
+
+            // Ransomware Families
+            {std::regex(R"(ryuk|conti|lockbit)", std::regex_constants::icase | std::regex_constants::optimize), "ransomware_family"},
+            {std::regex(R"(revil|sodinokibi)", std::regex_constants::icase | std::regex_constants::optimize), "revil_ransomware"},
+            {std::regex(R"(maze|egregor)", std::regex_constants::icase | std::regex_constants::optimize), "maze_ransomware_family"},
+            {std::regex(R"(darkside|blackmatter)", std::regex_constants::icase | std::regex_constants::optimize), "darkside_ransomware"},
+            {std::regex(R"(babuk|grief)", std::regex_constants::icase | std::regex_constants::optimize), "babuk_ransomware_family"},
+
+            // Living off the Land Binaries
+            {std::regex(R"(psexec|paexec)", std::regex_constants::icase | std::regex_constants::optimize), "psexec_lateral_movement"},
+            {std::regex(R"(wmic\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "wmi_abuse"},
+            {std::regex(R"(rundll32\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "rundll32_abuse"},
+            {std::regex(R"(regsvr32\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "regsvr32_abuse"},
+            {std::regex(R"(mshta\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "mshta_abuse"},
+            {std::regex(R"(powershell\.exe|pwsh\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "powershell_execution"},
+            {std::regex(R"(cmd\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "command_execution"},
+            {std::regex(R"(bitsadmin\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "bitsadmin_abuse"},
+            {std::regex(R"(certutil\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "certutil_abuse"},
+            {std::regex(R"(schtasks\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "scheduled_task_abuse"},
+
+            // Credential Access
+            {std::regex(R"(lsass\.dmp|lsass\.exe)", std::regex_constants::icase | std::regex_constants::optimize), "lsass_access"},
+            {std::regex(R"(sam\.hive|system\.hive|security\.hive)", std::regex_constants::icase | std::regex_constants::optimize), "registry_hive_access"},
+            {std::regex(R"(ntds\.dit)", std::regex_constants::icase | std::regex_constants::optimize), "ntds_database_access"},
+            {std::regex(R"(ticket\.kirbi|\.ccache)", std::regex_constants::icase | std::regex_constants::optimize), "kerberos_ticket"},
+
+            // Persistence Mechanisms
+            {std::regex(R"(golden.*ticket)", std::regex_constants::icase | std::regex_constants::optimize), "golden_ticket"},
+            {std::regex(R"(silver.*ticket)", std::regex_constants::icase | std::regex_constants::optimize), "silver_ticket"},
+            {std::regex(R"(dcsync|dcshadow)", std::regex_constants::icase | std::regex_constants::optimize), "dc_persistence"},
+            {std::regex(R"(skeleton.*key)", std::regex_constants::icase | std::regex_constants::optimize), "skeleton_key"}
+        };
+
+        // Authentication context patterns
+        compiled_auth_bypass_patterns = {
+            // NTLM Authentication Patterns
+            {std::regex(R"(NTLMSSP\x00[\x01-\x03])", std::regex_constants::icase | std::regex_constants::optimize), "ntlm_negotiation"},
+            {std::regex(R"(Type [123] Message)", std::regex_constants::icase | std::regex_constants::optimize), "ntlm_message_type"},
+            {std::regex(R"(NTLM.*hash|LM.*hash)", std::regex_constants::icase | std::regex_constants::optimize), "ntlm_hash"},
+            {std::regex(R"(Challenge.*Response)", std::regex_constants::icase | std::regex_constants::optimize), "ntlm_challenge"},
+
+            // Kerberos Authentication
+            {std::regex(R"(\x60\x48|\x60\x82)", std::regex_constants::icase | std::regex_constants::optimize), "kerberos_asn1"},
+            {std::regex(R"(AS-REQ|AS-REP|TGS-REQ|TGS-REP)", std::regex_constants::icase | std::regex_constants::optimize), "kerberos_message"},
+            {std::regex(R"(krbtgt|service.*ticket)", std::regex_constants::icase | std::regex_constants::optimize), "kerberos_ticket"},
+            {std::regex(R"(EncTicketPart|EncASRepPart)", std::regex_constants::icase | std::regex_constants::optimize), "kerberos_encrypted"},
+
+            // Authentication Bypass Techniques
+            {std::regex(R"(sql.*injection|sqli)", std::regex_constants::icase | std::regex_constants::optimize), "sql_injection_auth"},
+            {std::regex(R"(brute.*force|dictionary.*attack)", std::regex_constants::icase | std::regex_constants::optimize), "brute_force"},
+            {std::regex(R"(pass.*spray|password.*spray)", std::regex_constants::icase | std::regex_constants::optimize), "password_spraying"},
+            {std::regex(R"(pass.*hash|pth)", std::regex_constants::icase | std::regex_constants::optimize), "pass_the_hash"},
+            {std::regex(R"(pass.*ticket|ptt)", std::regex_constants::icase | std::regex_constants::optimize), "pass_the_ticket"}
+        };
+
+        // String analysis patterns
+        compiled_advanced_string_patterns = {
+            // URLs and Network Resources
+            {std::regex(R"(https?://[^\s<>"{}|\\^`\[\]]+)", std::regex_constants::icase | std::regex_constants::optimize), "http_url"},
+            {std::regex(R"(ftp://[^\s<>"{}|\\^`\[\]]+)", std::regex_constants::icase | std::regex_constants::optimize), "ftp_url"},
+            {std::regex(R"(\\\\[^\\]+\\[^\\]+)", std::regex_constants::icase | std::regex_constants::optimize), "unc_path"},
+            {std::regex(R"(\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b)", std::regex_constants::icase | std::regex_constants::optimize), "ipv4_address"},
+
+            // File Paths and Extensions
+            {std::regex(R"([C-Z]:\\(?:[^<>:"/|?*\r\n]+\\)*[^<>:"/|?*\r\n]*)", std::regex_constants::icase | std::regex_constants::optimize), "windows_file_path"},
+            {std::regex(R"(\.(?:exe|dll|sys|bat|cmd|ps1|vbs|js|jar|zip|rar))", std::regex_constants::icase | std::regex_constants::optimize), "executable_extension"},
+
+            // Registry Keys and Values
+            {std::regex(R"(HKEY_(?:LOCAL_MACHINE|CURRENT_USER|CLASSES_ROOT|USERS|CURRENT_CONFIG))", std::regex_constants::icase | std::regex_constants::optimize), "registry_hive"},
+            {std::regex(R"(\\(?:SOFTWARE|SYSTEM|SAM|SECURITY)\\)", std::regex_constants::icase | std::regex_constants::optimize), "registry_path"},
+
+            // Credentials and Authentication
+            {std::regex(R"((?:password|pass|pwd|passwd)\s*[:=]\s*[^\s]+)", std::regex_constants::icase | std::regex_constants::optimize), "credential_pattern"},
+            {std::regex(R"([A-Za-z0-9]{32})", std::regex_constants::icase | std::regex_constants::optimize), "md5_hash"},
+            {std::regex(R"([A-Za-z0-9]{64})", std::regex_constants::icase | std::regex_constants::optimize), "sha256_hash"},
+
+            // Encoding and Encryption
+            {std::regex(R"([A-Za-z0-9+/]{40,}={0,2})", std::regex_constants::icase | std::regex_constants::optimize), "base64_long"},
+            {std::regex(R"([0-9A-Fa-f]{32,})", std::regex_constants::icase | std::regex_constants::optimize), "hex_encoded"},
+
+            // PowerShell and Scripting
+            {std::regex(R"(-(?:enc|en|e|encodedcommand))", std::regex_constants::icase | std::regex_constants::optimize), "powershell_encoded"},
+            {std::regex(R"(Invoke-(?:Expression|Command|WebRequest|RestMethod))", std::regex_constants::icase | std::regex_constants::optimize), "powershell_invoke"}
+        };
+    }
+
 public:
-    // Malware family signatures
-    std::vector<std::pair<std::regex, std::string>> malware_signatures = {
-        // APT & Nation State
-        {std::regex(R"(cobalt.*strike)", std::regex_constants::icase), "cobalt_strike"},
-        {std::regex(R"(mimikatz)", std::regex_constants::icase), "mimikatz_credential_dumper"},
-        {std::regex(R"(bloodhound)", std::regex_constants::icase), "bloodhound_recon"},
-        {std::regex(R"(sharphound)", std::regex_constants::icase), "sharphound_collector"},
-        {std::regex(R"(rubeus)", std::regex_constants::icase), "rubeus_kerberos_abuse"},
-        {std::regex(R"(powerview)", std::regex_constants::icase), "powerview_enumeration"},
-        {std::regex(R"(empire|powerempire)", std::regex_constants::icase), "powershell_empire"},
-        {std::regex(R"(metasploit|meterpreter)", std::regex_constants::icase), "metasploit_framework"},
-        {std::regex(R"(impacket)", std::regex_constants::icase), "impacket_tools"},
-        {std::regex(R"(secretsdump)", std::regex_constants::icase), "secrets_dumping"},
+	// Initialize patterns only once
+    ThreatIntelligence() {
+        std::call_once(init_flag, initialize_patterns);
+    }
 
-        // Ransomware Families
-        {std::regex(R"(ryuk|conti|lockbit)", std::regex_constants::icase), "ransomware_family"},
-        {std::regex(R"(revil|sodinokibi)", std::regex_constants::icase), "revil_ransomware"},
-        {std::regex(R"(maze|egregor)", std::regex_constants::icase), "maze_ransomware_family"},
-        {std::regex(R"(darkside|blackmatter)", std::regex_constants::icase), "darkside_ransomware"},
-        {std::regex(R"(babuk|grief)", std::regex_constants::icase), "babuk_ransomware_family"},
+    // Public const accessors
+    const std::vector<std::pair<std::regex, std::string>>& get_malware_signatures() const {
+        return compiled_malware_signatures;
+    }
 
-        // Living off the Land Binaries (LOLBins)
-        {std::regex(R"(psexec|paexec)", std::regex_constants::icase), "psexec_lateral_movement"},
-        {std::regex(R"(wmic\.exe)", std::regex_constants::icase), "wmi_abuse"},
-        {std::regex(R"(rundll32\.exe)", std::regex_constants::icase), "rundll32_abuse"},
-        {std::regex(R"(regsvr32\.exe)", std::regex_constants::icase), "regsvr32_abuse"},
-        {std::regex(R"(mshta\.exe)", std::regex_constants::icase), "mshta_abuse"},
-        {std::regex(R"(powershell\.exe|pwsh\.exe)", std::regex_constants::icase), "powershell_execution"},
-        {std::regex(R"(cmd\.exe)", std::regex_constants::icase), "command_execution"},
-        {std::regex(R"(bitsadmin\.exe)", std::regex_constants::icase), "bitsadmin_abuse"},
-        {std::regex(R"(certutil\.exe)", std::regex_constants::icase), "certutil_abuse"},
-        {std::regex(R"(schtasks\.exe)", std::regex_constants::icase), "scheduled_task_abuse"},
+    const std::vector<std::pair<std::regex, std::string>>& get_auth_bypass_patterns() const {
+        return compiled_auth_bypass_patterns;
+    }
 
-        // Credential Access
-        {std::regex(R"(lsass\.dmp|lsass\.exe)", std::regex_constants::icase), "lsass_access"},
-        {std::regex(R"(sam\.hive|system\.hive|security\.hive)", std::regex_constants::icase), "registry_hive_access"},
-        {std::regex(R"(ntds\.dit)", std::regex_constants::icase), "ntds_database_access"},
-        {std::regex(R"(ticket\.kirbi|\.ccache)", std::regex_constants::icase), "kerberos_ticket"},
-
-        // Persistence Mechanisms
-        {std::regex(R"(golden.*ticket)", std::regex_constants::icase), "golden_ticket"},
-        {std::regex(R"(silver.*ticket)", std::regex_constants::icase), "silver_ticket"},
-        {std::regex(R"(dcsync|dcshadow)", std::regex_constants::icase), "dc_persistence"},
-        {std::regex(R"(skeleton.*key)", std::regex_constants::icase), "skeleton_key"}
-    };
-
-    // Authentication context patterns
-    std::vector<std::pair<std::regex, std::string>> auth_bypass_patterns = {
-        // NTLM Authentication Patterns
-        {std::regex(R"(NTLMSSP\x00[\x01-\x03])", std::regex_constants::icase), "ntlm_negotiation"},
-        {std::regex(R"(Type [123] Message)", std::regex_constants::icase), "ntlm_message_type"},
-        {std::regex(R"(NTLM.*hash|LM.*hash)", std::regex_constants::icase), "ntlm_hash"},
-        {std::regex(R"(Challenge.*Response)", std::regex_constants::icase), "ntlm_challenge"},
-
-        // Kerberos Authentication
-        {std::regex(R"(\x60\x48|\x60\x82)", std::regex_constants::icase), "kerberos_asn1"},
-        {std::regex(R"(AS-REQ|AS-REP|TGS-REQ|TGS-REP)", std::regex_constants::icase), "kerberos_message"},
-        {std::regex(R"(krbtgt|service.*ticket)", std::regex_constants::icase), "kerberos_ticket"},
-        {std::regex(R"(EncTicketPart|EncASRepPart)", std::regex_constants::icase), "kerberos_encrypted"},
-
-        // Authentication Bypass Techniques
-        {std::regex(R"(sql.*injection|sqli)", std::regex_constants::icase), "sql_injection_auth"},
-        {std::regex(R"(brute.*force|dictionary.*attack)", std::regex_constants::icase), "brute_force"},
-        {std::regex(R"(pass.*spray|password.*spray)", std::regex_constants::icase), "password_spraying"},
-        {std::regex(R"(pass.*hash|pth)", std::regex_constants::icase), "pass_the_hash"},
-        {std::regex(R"(pass.*ticket|ptt)", std::regex_constants::icase), "pass_the_ticket"}
-    };
-
-    // String analysis patterns
-    std::vector<std::pair<std::regex, std::string>> advanced_string_patterns = {
-        // URLs and Network Resources
-        {std::regex(R"(https?://[^\s<>"{}|\\^`\[\]]+)", std::regex_constants::icase), "http_url"},
-        {std::regex(R"(ftp://[^\s<>"{}|\\^`\[\]]+)", std::regex_constants::icase), "ftp_url"},
-        {std::regex(R"(\\\\[^\\]+\\[^\\]+)", std::regex_constants::icase), "unc_path"},
-        {std::regex(R"(\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b)", std::regex_constants::icase), "ipv4_address"},
-
-        // File Paths and Extensions
-        {std::regex(R"([C-Z]:\\(?:[^<>:"/|?*\r\n]+\\)*[^<>:"/|?*\r\n]*)", std::regex_constants::icase), "windows_file_path"},
-        {std::regex(R"(\.(?:exe|dll|sys|bat|cmd|ps1|vbs|js|jar|zip|rar))", std::regex_constants::icase), "executable_extension"},
-
-        // Registry Keys and Values
-        {std::regex(R"(HKEY_(?:LOCAL_MACHINE|CURRENT_USER|CLASSES_ROOT|USERS|CURRENT_CONFIG))", std::regex_constants::icase), "registry_hive"},
-        {std::regex(R"(\\(?:SOFTWARE|SYSTEM|SAM|SECURITY)\\)", std::regex_constants::icase), "registry_path"},
-
-        // Credentials and Authentication
-        {std::regex(R"((?:password|pass|pwd|passwd)\s*[:=]\s*[^\s]+)", std::regex_constants::icase), "credential_pattern"},
-        {std::regex(R"([A-Za-z0-9]{32})", std::regex_constants::icase), "md5_hash"},
-        {std::regex(R"([A-Za-z0-9]{64})", std::regex_constants::icase), "sha256_hash"},
-
-        // Encoding and Encryption
-        {std::regex(R"([A-Za-z0-9+/]{40,}={0,2})", std::regex_constants::icase), "base64_long"},
-        {std::regex(R"([0-9A-Fa-f]{32,})", std::regex_constants::icase), "hex_encoded"},
-
-        // PowerShell and Scripting
-        {std::regex(R"(-(?:enc|en|e|encodedcommand))", std::regex_constants::icase), "powershell_encoded"},
-        {std::regex(R"(Invoke-(?:Expression|Command|WebRequest|RestMethod))", std::regex_constants::icase), "powershell_invoke"}
-    };
+    const std::vector<std::pair<std::regex, std::string>>& get_advanced_string_patterns() const {
+        return compiled_advanced_string_patterns;
+    }
 };
+
+// Initialize static members
+std::vector<std::pair<std::regex, std::string>> ThreatIntelligence::compiled_malware_signatures;
+std::vector<std::pair<std::regex, std::string>> ThreatIntelligence::compiled_auth_bypass_patterns;
+std::vector<std::pair<std::regex, std::string>> ThreatIntelligence::compiled_advanced_string_patterns;
+std::once_flag ThreatIntelligence::init_flag;
 
 // Threat Intelligence Engine
 class ThreatIntelligenceEngine {
@@ -701,31 +735,31 @@ private:
     std::vector<AttackTechnique> attack_techniques = {
         // Lateral Movement Techniques
         {"T1021.002", "Remote Services: SMB/Windows Admin Shares", "Lateral Movement",
-         {"psexec", "admin$", "c$", "ipc$"},
-         {"367abb81-9844-35f1-ad32-98f038001003"}, {19, 20, 23}, 85},
+        {"psexec", "admin$", "c$", "ipc$"},
+        {"367abb81-9844-35f1-ad32-98f038001003"}, {19, 20, 23}, 85},
 
         {"T1053.005", "Scheduled Task/Job: Scheduled Task", "Execution",
-         {"schtasks", "taskschd"},
-         {"86d35949-83c9-4044-b424-db363231fd0c"}, {1, 12, 13}, 75},
+        {"schtasks", "taskschd"},
+        {"86d35949-83c9-4044-b424-db363231fd0c"}, {1, 12, 13}, 75},
 
-         // Credential Access Techniques
-         {"T1003.001", "OS Credential Dumping: LSASS Memory", "Credential Access",
-          {"lsass", "mimikatz", "procdump"},
-          {"c681d488-d850-11d0-8c52-00c04fd90f7e"}, {}, 95},
+        // Credential Access Techniques
+        {"T1003.001", "OS Credential Dumping: LSASS Memory", "Credential Access",
+        {"lsass", "mimikatz", "procdump"},
+        {"c681d488-d850-11d0-8c52-00c04fd90f7e"}, {}, 95},
 
-         {"T1003.002", "OS Credential Dumping: Security Account Manager", "Credential Access",
-          {"sam", "system", "security"},
-          {"12345778-1234-abcd-ef00-0123456789ac"}, {0, 7, 16}, 90},
+        {"T1003.002", "OS Credential Dumping: Security Account Manager", "Credential Access",
+        {"sam", "system", "security"},
+        {"12345778-1234-abcd-ef00-0123456789ac"}, {0, 7, 16}, 90},
 
-          // Discovery Techniques  
-          {"T1087.002", "Account Discovery: Domain Account", "Discovery",
-           {"net user", "dsquery", "ldap"},
-           {"12345778-1234-abcd-ef00-0123456789ac"}, {5, 6, 16}, 60},
+        // Discovery Techniques  
+        {"T1087.002", "Account Discovery: Domain Account", "Discovery",
+        {"net user", "dsquery", "ldap"},
+        {"12345778-1234-abcd-ef00-0123456789ac"}, {5, 6, 16}, 60},
 
-           // Persistence Techniques
-           {"T1543.003", "Create or Modify System Process: Windows Service", "Persistence",
-            {"sc create", "service install"},
-            {"367abb81-9844-35f1-ad32-98f038001003"}, {23, 24}, 80}
+        // Persistence Techniques
+        {"T1543.003", "Create or Modify System Process: Windows Service", "Persistence",
+        {"sc create", "service install"},
+        {"367abb81-9844-35f1-ad32-98f038001003"}, {23, 24}, 80}
     };
 
     // Known Attack Patterns Database
@@ -769,7 +803,7 @@ private:
         {"payload_pattern", "psexec", "PSExec lateral movement", "Lateral Movement", 75}
     };
 
-	// Helper function to match IOCs
+// Helper function to match IOCs
 public:
     struct ThreatIntelligenceResult {
         int risk_score;
@@ -1402,7 +1436,7 @@ private:
         return hosting_asns.count(asn) > 0;
     }
 
-	// Geolocation information structure
+// Geolocation information structure
 public:
     struct GeolocationInfo {
         std::string source_country = "US";
@@ -1710,8 +1744,13 @@ private:
         double entropy = calculate_entropy(payload, len);
         analysis.encryption_detected = (entropy > 7.5);
 
-        // Malware signatures
-        for (const auto& signature : threat_intel.malware_signatures) {
+        // Skip expensive regex if likely encrypted
+        if (analysis.encryption_detected && entropy > 7.9) {
+            return analysis;
+        }
+
+        // Use pre-compiled malware signatures
+        for (const auto& signature : threat_intel.get_malware_signatures()) {
             const std::regex& pattern = signature.first;
             const std::string& name = signature.second;
 
@@ -1721,8 +1760,8 @@ private:
             }
         }
 
-        // String analysis
-        for (const auto& pattern_type : threat_intel.advanced_string_patterns) {
+        // Use pre-compiled string analysis patterns
+        for (const auto& pattern_type : threat_intel.get_advanced_string_patterns()) {
             const auto& pattern = pattern_type.first;
             const auto& type = pattern_type.second;
 
@@ -1742,15 +1781,20 @@ private:
         // Unicode detection
         analysis.string_analysis.contains_unicode = has_unicode_strings(payload, len);
 
-        // Additional analysis patterns
-        analysis.string_analysis.contains_registry_keys = std::regex_search(payload_str,
-            std::regex(R"(HKEY_|\\SOFTWARE\\|\\SYSTEM\\)", std::regex_constants::icase));
-        analysis.string_analysis.contains_credentials = std::regex_search(payload_str,
-            std::regex(R"(password|username|token|secret)", std::regex_constants::icase));
-        analysis.string_analysis.contains_powershell = std::regex_search(payload_str,
-            std::regex(R"(-enc|-en|-e|Invoke-|powershell)", std::regex_constants::icase));
-        analysis.string_analysis.contains_executable_extensions = std::regex_search(payload_str,
-            std::regex(R"(\.(?:exe|dll|bat|cmd|ps1|vbs|js))", std::regex_constants::icase));
+        // Additional analysis patterns - compile these as static too
+        static const std::regex registry_regex(R"(HKEY_|\\SOFTWARE\\|\\SYSTEM\\)",
+            std::regex_constants::icase | std::regex_constants::optimize);
+        static const std::regex credentials_regex(R"(password|username|token|secret)",
+            std::regex_constants::icase | std::regex_constants::optimize);
+        static const std::regex powershell_regex(R"(-enc|-en|-e|Invoke-|powershell)",
+            std::regex_constants::icase | std::regex_constants::optimize);
+        static const std::regex executable_regex(R"(\.(?:exe|dll|bat|cmd|ps1|vbs|js))",
+            std::regex_constants::icase | std::regex_constants::optimize);
+
+        analysis.string_analysis.contains_registry_keys = std::regex_search(payload_str, registry_regex);
+        analysis.string_analysis.contains_credentials = std::regex_search(payload_str, credentials_regex);
+        analysis.string_analysis.contains_powershell = std::regex_search(payload_str, powershell_regex);
+        analysis.string_analysis.contains_executable_extensions = std::regex_search(payload_str, executable_regex);
 
         return analysis;
     }
@@ -1796,8 +1840,8 @@ private:
 
         std::string payload_str(reinterpret_cast<const char*>(payload), len);
 
-        // Authentication pattern detection
-        for (const auto& pair : threat_intel.auth_bypass_patterns) {
+        // Use pre-compiled authentication patterns
+        for (const auto& pair : threat_intel.get_auth_bypass_patterns()) {
             const auto& pattern = pair.first;
             const auto& auth_type = pair.second;
 
@@ -1848,9 +1892,11 @@ private:
                 memcpy(&smb_info.tree_id, payload + 40, 2);
                 smb_info.tree_id = ntohs(smb_info.tree_id);
 
-                // Look for IPC$ or named pipe indicators
+                // Look for IPC$ or named pipe indicators - use static compiled regex
+                static const std::regex pipe_regex(R"(\\pipe\\([a-zA-Z0-9_]+))",
+                    std::regex_constants::icase | std::regex_constants::optimize);
+
                 std::string payload_str(reinterpret_cast<const char*>(payload), len);
-                std::regex pipe_regex(R"(\\pipe\\([a-zA-Z0-9_]+))");
                 std::smatch matches;
                 if (std::regex_search(payload_str, matches, pipe_regex)) {
                     smb_info.named_pipe = "\\\\" + matches[0].str();
@@ -1973,7 +2019,7 @@ private:
         else return "low";
     }
 
-	// UUID to interface name mapping
+// UUID to interface name mapping
 public:
     CompleteRPCParser(const std::string& geoip_db_path, const std::string& asn_db_path) {
         try {
