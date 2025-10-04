@@ -5,6 +5,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS 1
 
+// Necessary headers
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "iphlpapi.lib")
 
@@ -17,42 +18,34 @@
 #include <set>
 #include <algorithm>
 #include <regex>
-#include <cmath>
 #include <memory>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
 #include <cstring>
-
-// Add threading support
+// Concurrency headers
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <queue>
 #include <future>
-#include <atomic>
 #include <functional>
-
-// Platform-specific includes for networking
+// Platform-specific headers
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
-
+// OpenSSL for hashing
 #include <openssl/sha.h>
-
-// Network and packet processing libraries
+// PcapPlusPlus for packet parsing
 #include "PcapPlusPlus/Packet.h"
-#include "PcapPlusPlus/EthLayer.h" 
 #include "PcapPlusPlus/IPv4Layer.h"
 #include "PcapPlusPlus/IPv6Layer.h"
 #include "PcapPlusPlus/TcpLayer.h"
 #include "PcapPlusPlus/UdpLayer.h"
 #include "PcapPlusPlus/PayloadLayer.h"
-
-// MaxMind GeoIP2 C++ Library
+// MaxMindDB for geolocation
 #include <maxminddb.h>
-
-// JSON library
+// JSON for structured output
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -76,7 +69,7 @@ public:
                         std::unique_lock<std::mutex> lock(this->queue_mutex);
                         this->condition.wait(lock, [this] {
                             return this->stop || !this->tasks.empty();
-                            });
+                        });
 
                         if (this->stop && this->tasks.empty()) {
                             return;
@@ -87,10 +80,9 @@ public:
                     }
                     task();
                 }
-                });
+            });
         }
     }
-
 	// Enqueue a new task
     template<class F, class... Args>
     auto enqueue(F&& f, Args&&... args)
@@ -112,12 +104,6 @@ public:
         condition.notify_one();
         return res;
     }
-
-    size_t queue_size() {
-        std::unique_lock<std::mutex> lock(queue_mutex);
-        return tasks.size();
-    }
-
 	// Destructor
     ~ThreadPool() {
         {
@@ -130,11 +116,8 @@ public:
         }
     }
 };
-
-// #pragma pack for MSVC compatibility
+// DCERPC Header structure
 #pragma pack(push, 1)
-
-// DCE/RPC Header Structure
 struct DCERPCHeader {
     uint8_t version;
     uint8_t version_minor;
@@ -148,7 +131,7 @@ struct DCERPCHeader {
 };
 #pragma pack(pop)
 
-// Session tracking structure
+// Session information structure
 struct SessionInfo {
     std::string session_id;
     std::string conversation_id;
@@ -157,18 +140,17 @@ struct SessionInfo {
     bool is_new;
 };
 
-// Authentication Info Structure
+// Authentication information structure
 struct AuthInfo {
     bool auth_present = false;
     std::string auth_type = "None";
     std::string auth_level = "none";
     std::string impersonation_level = "anonymous";
     bool bypass_detected = false;
-    bool mfa_present = false;
     bool suspicious_auth = false;
 };
 
-// Payload Analysis Structure
+// Payload analysis structure
 struct PayloadAnalysis {
     bool contains_sensitive_data = false;
     bool encryption_detected = false;
@@ -181,13 +163,11 @@ struct PayloadAnalysis {
         bool contains_registry_keys = false;
         bool contains_credentials = false;
         bool contains_powershell = false;
-        bool contains_network_indicators = false;
-        bool contains_crypto_addresses = false;
         bool contains_executable_extensions = false;
     } string_analysis;
 };
 
-// SMB Info Structure
+// SMB session information structure
 struct SMBInfo {
     std::string named_pipe;
     uint16_t tree_id = 0;
@@ -495,7 +475,7 @@ private:
         return result;
     }
 
-	// Initialize with common network ranges
+// Initialize with common network ranges
 public:
     NetworkTopology() {
 
@@ -535,40 +515,30 @@ public:
         range.description = desc;
         management_networks.push_back(range);
     }
-
-	// Check if IP belongs to internal network
+	// Check if IP is in internal networks
     bool is_internal_ip(const std::string& ip) {
         uint32_t addr = ip_to_uint32(ip);
         for (const auto& range : internal_networks) {
-            if ((addr & range.mask) == range.network) {
-                return true;
-            }
+            if ((addr & range.mask) == range.network) return true;
         }
         return false;
     }
-
-	// Check if IP belongs to DMZ network
+	// Check if IP is in DMZ networks
     bool is_dmz_ip(const std::string& ip) {
         uint32_t addr = ip_to_uint32(ip);
         for (const auto& range : dmz_networks) {
-            if ((addr & range.mask) == range.network) {
-                return true;
-            }
+            if ((addr & range.mask) == range.network) return true;
         }
         return false;
     }
-
-	// Check if IP belongs to management network
+	// Check if IP is in management networks
     bool is_management_ip(const std::string& ip) {
         uint32_t addr = ip_to_uint32(ip);
         for (const auto& range : management_networks) {
-            if ((addr & range.mask) == range.network) {
-                return true;
-            }
+            if ((addr & range.mask) == range.network) return true;
         }
         return false;
     }
-
 	// Classify IP into network zone
     std::string classify_network_zone(const std::string& ip) {
         if (is_management_ip(ip)) return "management";
@@ -698,11 +668,9 @@ public:
     const std::vector<std::pair<std::regex, std::string>>& get_malware_signatures() const {
         return compiled_malware_signatures;
     }
-
     const std::vector<std::pair<std::regex, std::string>>& get_auth_bypass_patterns() const {
         return compiled_auth_bypass_patterns;
     }
-
     const std::vector<std::pair<std::regex, std::string>>& get_advanced_string_patterns() const {
         return compiled_advanced_string_patterns;
     }
@@ -824,25 +792,15 @@ public:
         const std::string& direction,
         bool is_cross_border,
         const PayloadAnalysis& payload_analysis) {
-
+		
+        // Aggregate results
         ThreatIntelligenceResult result;
         result.risk_score = calculate_risk_score(interface_uuid, operation_number,
-            suspicious_patterns, auth_info,
-            source_country, source_asn,
-            direction, is_cross_border, payload_analysis);
-
-        result.attack_techniques = identify_attack_techniques(interface_uuid, operation_number,
-            suspicious_patterns, payload_analysis);
-
-        result.threat_indicators = detect_threat_indicators(interface_uuid, operation_number,
-            suspicious_patterns, auth_info,
-            source_country, direction, payload_analysis);
-
+            suspicious_patterns, auth_info, source_country, source_asn, direction, is_cross_border, payload_analysis);
+        result.attack_techniques = identify_attack_techniques(interface_uuid, operation_number, suspicious_patterns, payload_analysis);
+        result.threat_indicators = detect_threat_indicators(interface_uuid, operation_number, suspicious_patterns, auth_info, source_country, direction, payload_analysis);
         result.attack_pattern = identify_attack_pattern(interface_uuid, operation_number);
-
-        result.ioc_matches = match_iocs(interface_uuid, operation_number,
-            suspicious_patterns, source_country, source_asn);
-
+        result.ioc_matches = match_iocs(interface_uuid, operation_number, suspicious_patterns, source_country, source_asn);
         return result;
     }
 
@@ -886,13 +844,11 @@ private:
                 score += 20;
                 break;
             }
-            else if (pattern.find("ransomware") != std::string::npos ||
-                pattern.find("apt_group") != std::string::npos) {
+            else if (pattern.find("ransomware") != std::string::npos || pattern.find("apt_group") != std::string::npos) {
                 score += 15;
                 break;
             }
-            else if (pattern.find("psexec") != std::string::npos ||
-                pattern.find("powershell") != std::string::npos) {
+            else if (pattern.find("psexec") != std::string::npos || pattern.find("powershell") != std::string::npos) {
                 score += 10;
                 break;
             }
@@ -934,7 +890,8 @@ private:
         const std::vector<std::string>& suspicious_patterns,
         const PayloadAnalysis& payload_analysis) {
         std::vector<json> techniques;
-
+		
+        // Match techniques based on indicators
         for (const auto& technique : attack_techniques) {
             double confidence = 0.0;
             bool matches = false;
@@ -991,9 +948,7 @@ private:
 
         // Service-based indicators
         if (interface_uuid == "367abb81-9844-35f1-ad32-98f038001003") {
-            if (operation_number == 23) { // CreateServiceW
-                indicators.push_back("remote_service_creation");
-            }
+            if (operation_number == 23) indicators.push_back("remote_service_creation");
             indicators.push_back("privileged_interface_access");
         }
 
@@ -1004,53 +959,35 @@ private:
         }
 
         // Authentication indicators
-        if (auth_info.bypass_detected) {
-            indicators.push_back("suspicious_authentication");
-        }
-        if (auth_info.auth_type == "None") {
-            indicators.push_back("anonymous_connection");
-        }
+        if (auth_info.bypass_detected) indicators.push_back("suspicious_authentication");
+        if (auth_info.auth_type == "None") indicators.push_back("anonymous_connection");
 
         // Geographic indicators
-        if (source_country == "CN" || source_country == "RU") {
-            indicators.push_back("cross_border_communication");
-        }
+        if (source_country == "CN" || source_country == "RU") indicators.push_back("cross_border_communication");
 
         // Pattern-based indicators
         for (const auto& pattern : suspicious_patterns) {
-            if (pattern.find("psexec") != std::string::npos) {
-                indicators.push_back("lateral_movement_detected");
-            }
-            if (pattern.find("mimikatz") != std::string::npos) {
-                indicators.push_back("credential_access_attempt");
-            }
-            if (pattern.find("powershell") != std::string::npos) {
-                indicators.push_back("powershell_execution");
-            }
+            if (pattern.find("psexec") != std::string::npos) indicators.push_back("lateral_movement_detected");
+            if (pattern.find("mimikatz") != std::string::npos) indicators.push_back("credential_access_attempt");
+            if (pattern.find("powershell") != std::string::npos) indicators.push_back("powershell_execution");
         }
 
         return indicators;
     }
-
 	// Identify known attack patterns based on interface and operation
     std::string identify_attack_pattern(const std::string& interface_uuid, int operation_number) {
         std::string operation_sig = interface_uuid + ":" + std::to_string(operation_number);
 
         for (const auto& attack_pattern : attack_patterns) {
-            const auto& pattern_name = attack_pattern.first;
-            const auto& signatures = attack_pattern.second;
-
-            for (const auto& signature : signatures) {
+            for (const auto& signature : attack_pattern.second) {
                 if (signature == interface_uuid || signature == operation_sig) {
-                    return pattern_name;
+                    return attack_pattern.first;
                 }
             }
         }
-
         return "Unknown";
     }
-
-	// Match Indicators of Compromise (IOCs)
+	// Match IOCs based on multiple inputs
     std::vector<json> match_iocs(const std::string& interface_uuid, int operation_number,
         const std::vector<std::string>& suspicious_patterns,
         const std::string& source_country, int source_asn) {
@@ -1064,9 +1001,7 @@ private:
             }
             else if (ioc.ioc_type == "operation_signature") {
                 std::string op_sig = interface_uuid + ":" + std::to_string(operation_number);
-                if (ioc.ioc_value == op_sig) {
-                    match = true;
-                }
+                if (ioc.ioc_value == op_sig) match = true;
             }
             else if (ioc.ioc_type == "payload_pattern") {
                 for (const auto& pattern : suspicious_patterns) {
@@ -1103,333 +1038,141 @@ private:
     bool asn_db_loaded;
     std::mutex geo_mutex;
 
-    // Parse MaxMind database entry data into JSON
-    json parse_mmdb_entry_data_list(MMDB_entry_data_list_s* entry_data_list) {
-        json result;
-
-        if (!entry_data_list) return result;
-
-		// Recursive parsing of entry data
-        MMDB_entry_data_list_s* current = entry_data_list;
-        std::vector<std::string> path_stack;
-
-		// Traverse the linked list of entry data
-        while (current) {
-            MMDB_entry_data_s* data = &current->entry_data;
-
-            switch (data->type) {
-            case MMDB_DATA_TYPE_MAP: {
-                // Maps are handled by their key-value pairs
-                break;
-            }
-            case MMDB_DATA_TYPE_ARRAY: {
-                // Arrays are handled by their elements
-                break;
-            }
-            case MMDB_DATA_TYPE_UTF8_STRING: {
-                if (data->data_size > 0) {
-                    std::string value(data->utf8_string, data->data_size);
-                    if (!path_stack.empty()) {
-                        set_nested_json_value(result, path_stack, value);
-                    }
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_BYTES: {
-                if (data->data_size > 0) {
-                    std::string value(reinterpret_cast<const char*>(data->bytes), data->data_size);
-                    if (!path_stack.empty()) {
-                        set_nested_json_value(result, path_stack, value);
-                    }
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_DOUBLE: {
-                if (!path_stack.empty()) {
-                    set_nested_json_value(result, path_stack, data->double_value);
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_FLOAT: {
-                if (!path_stack.empty()) {
-                    set_nested_json_value(result, path_stack, static_cast<double>(data->float_value));
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_UINT16: {
-                if (!path_stack.empty()) {
-                    set_nested_json_value(result, path_stack, static_cast<int>(data->uint16));
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_UINT32: {
-                if (!path_stack.empty()) {
-                    set_nested_json_value(result, path_stack, static_cast<int>(data->uint32));
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_INT32: {
-                if (!path_stack.empty()) {
-                    set_nested_json_value(result, path_stack, static_cast<int>(data->int32));
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_UINT64: {
-                if (!path_stack.empty()) {
-                    set_nested_json_value(result, path_stack, static_cast<long long>(data->uint64));
-                }
-                break;
-            }
-            case MMDB_DATA_TYPE_BOOLEAN: {
-                if (!path_stack.empty()) {
-                    set_nested_json_value(result, path_stack, static_cast<bool>(data->boolean));
-                }
-                break;
-            }
-            default:
-                break;
-            }
-
-            // Update path stack based on the data structure
-            if (current->entry_data.offset_to_next == 0) {
-                if (!path_stack.empty()) {
-                    path_stack.pop_back();
-                }
-            }
-            else if (current + 1 && (current + 1)->entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
-                // Next element is likely a key
-                MMDB_entry_data_s* next_data = &(current + 1)->entry_data;
-                if (next_data->data_size > 0) {
-                    std::string key(next_data->utf8_string, next_data->data_size);
-                    path_stack.push_back(key);
-                }
-            }
-
-            current = current->next;
-        }
-
-        return result;
-    }
-
-    // Helper function to set nested JSON values
-    void set_nested_json_value(json& obj, const std::vector<std::string>& path, const json& value) {
-        json* current = &obj;
-
-        for (size_t i = 0; i < path.size() - 1; ++i) {
-            if (current->find(path[i]) == current->end()) {
-                (*current)[path[i]] = json::object();
-            }
-            current = &(*current)[path[i]];
-        }
-
-        if (!path.empty()) {
-            (*current)[path.back()] = value;
-        }
-    }
-
-    // MaxMind data extraction
+	// Load MaxMind databases
     json extract_geoip_data(MMDB_lookup_result_s& result) {
         json geo_data;
+        if (!result.found_entry) return geo_data;
 
-        if (!result.found_entry) {
-            return geo_data;
-        }
-
-        // Extract country information
         MMDB_entry_data_s entry_data;
 
-        // Country ISO code
         const char* country_path[] = { "country", "iso_code", NULL };
-        int status = MMDB_aget_value(&result.entry, &entry_data, country_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
-            std::string country_code(entry_data.utf8_string, entry_data.data_size);
-            geo_data["country"]["iso_code"] = country_code;
+        if (MMDB_aget_value(&result.entry, &entry_data, country_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
+            geo_data["country"]["iso_code"] = std::string(entry_data.utf8_string, entry_data.data_size);
         }
-
-        // Country name
         const char* country_name_path[] = { "country", "names", "en", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, country_name_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
-            std::string country_name(entry_data.utf8_string, entry_data.data_size);
-            geo_data["country"]["names"]["en"] = country_name;
+        if (MMDB_aget_value(&result.entry, &entry_data, country_name_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
+            geo_data["country"]["names"]["en"] = std::string(entry_data.utf8_string, entry_data.data_size);
         }
-
-        // City name
         const char* city_path[] = { "city", "names", "en", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, city_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
-            std::string city_name(entry_data.utf8_string, entry_data.data_size);
-            geo_data["city"]["names"]["en"] = city_name;
+        if (MMDB_aget_value(&result.entry, &entry_data, city_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
+            geo_data["city"]["names"]["en"] = std::string(entry_data.utf8_string, entry_data.data_size);
         }
-
-        // Location (latitude/longitude)
         const char* lat_path[] = { "location", "latitude", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, lat_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_DOUBLE) {
+        if (MMDB_aget_value(&result.entry, &entry_data, lat_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_DOUBLE) {
             geo_data["location"]["latitude"] = entry_data.double_value;
         }
-
         const char* lon_path[] = { "location", "longitude", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, lon_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_DOUBLE) {
+        if (MMDB_aget_value(&result.entry, &entry_data, lon_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_DOUBLE) {
             geo_data["location"]["longitude"] = entry_data.double_value;
         }
-
-        // Timezone
         const char* tz_path[] = { "location", "time_zone", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, tz_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
-            std::string timezone(entry_data.utf8_string, entry_data.data_size);
-            geo_data["location"]["time_zone"] = timezone;
+        if (MMDB_aget_value(&result.entry, &entry_data, tz_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
+            geo_data["location"]["time_zone"] = std::string(entry_data.utf8_string, entry_data.data_size);
         }
-
-        // Traits (anonymous proxy, satellite provider, etc.)
         const char* anon_proxy_path[] = { "traits", "is_anonymous_proxy", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, anon_proxy_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_BOOLEAN) {
+        if (MMDB_aget_value(&result.entry, &entry_data, anon_proxy_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_BOOLEAN) {
             geo_data["traits"]["is_anonymous_proxy"] = static_cast<bool>(entry_data.boolean);
         }
-
         const char* satellite_path[] = { "traits", "is_satellite_provider", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, satellite_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_BOOLEAN) {
+        if (MMDB_aget_value(&result.entry, &entry_data, satellite_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_BOOLEAN) {
             geo_data["traits"]["is_satellite_provider"] = static_cast<bool>(entry_data.boolean);
         }
-
         return geo_data;
     }
 
-	// ASN data extraction
+	// Extract ASN data
     json extract_asn_data(MMDB_lookup_result_s& result) {
         json asn_data;
-
-        if (!result.found_entry) {
-            return asn_data;
-        }
+        if (!result.found_entry) return asn_data;
 
         MMDB_entry_data_s entry_data;
 
-        // ASN number
         const char* asn_path[] = { "autonomous_system_number", NULL };
-        int status = MMDB_aget_value(&result.entry, &entry_data, asn_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UINT32) {
+        if (MMDB_aget_value(&result.entry, &entry_data, asn_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UINT32) {
             asn_data["autonomous_system_number"] = static_cast<int>(entry_data.uint32);
         }
-
-        // ASN organization
         const char* org_path[] = { "autonomous_system_organization", NULL };
-        status = MMDB_aget_value(&result.entry, &entry_data, org_path);
-        if (status == MMDB_SUCCESS && entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
-            std::string org_name(entry_data.utf8_string, entry_data.data_size);
-            asn_data["autonomous_system_organization"] = org_name;
+        if (MMDB_aget_value(&result.entry, &entry_data, org_path) == MMDB_SUCCESS && 
+            entry_data.has_data && entry_data.type == MMDB_DATA_TYPE_UTF8_STRING) {
+            asn_data["autonomous_system_organization"] = std::string(entry_data.utf8_string, entry_data.data_size);
         }
-
         return asn_data;
     }
 
-	// IP lookup functions
+	// Lookup IP in GeoIP database
     json lookup_ip_geolocation(const std::string& ip) {
         json result;
-
-        if (!geoip_db_loaded || !geoip_db) {
-            return result;
-        }
+        if (!geoip_db_loaded || !geoip_db) return result;
 
         std::lock_guard<std::mutex> lock(geo_mutex);
 
         int gai_error, mmdb_error;
         MMDB_lookup_result_s lookup_result = MMDB_lookup_string(geoip_db.get(), ip.c_str(), &gai_error, &mmdb_error);
 
-        if (gai_error != 0) {
-            std::cerr << "Error from getaddrinfo for " << ip << ": " << gai_strerror(gai_error) << std::endl;
-            return result;
-        }
-
-        if (mmdb_error != MMDB_SUCCESS) {
-            std::cerr << "Error from libmaxminddb: " << MMDB_strerror(mmdb_error) << std::endl;
-            return result;
-        }
-
-        if (lookup_result.found_entry) {
+        if (gai_error == 0 && mmdb_error == MMDB_SUCCESS && lookup_result.found_entry) {
             result = extract_geoip_data(lookup_result);
         }
-
         return result;
     }
 
-	// ASN lookup function
+	// Lookup IP in ASN database
     json lookup_ip_asn(const std::string& ip) {
         json result;
-
-        if (!asn_db_loaded || !asn_db) {
-            return result;
-        }
+        if (!asn_db_loaded || !asn_db) return result;
 
         std::lock_guard<std::mutex> lock(geo_mutex);
 
         int gai_error, mmdb_error;
         MMDB_lookup_result_s lookup_result = MMDB_lookup_string(asn_db.get(), ip.c_str(), &gai_error, &mmdb_error);
 
-        if (gai_error != 0) {
-            std::cerr << "Error from getaddrinfo for " << ip << ": " << gai_strerror(gai_error) << std::endl;
-            return result;
-        }
-
-        if (mmdb_error != MMDB_SUCCESS) {
-            std::cerr << "Error from libmaxminddb: " << MMDB_strerror(mmdb_error) << std::endl;
-            return result;
-        }
-
-        if (lookup_result.found_entry) {
+        if (gai_error == 0 && mmdb_error == MMDB_SUCCESS && lookup_result.found_entry) {
             result = extract_asn_data(lookup_result);
         }
-
         return result;
     }
 
 	// Check if ISP is a known satellite provider
     bool is_satellite_provider(const std::string& isp_name) {
-        std::vector<std::string> satellite_providers = {
+        static const std::vector<std::string> satellite_providers = {
             "Hughes", "Viasat", "HughesNet", "WildBlue", "Exede", "Intelsat",
             "SES", "Eutelsat", "Telesat", "O3b", "Thuraya", "Iridium"
         };
 
         for (const auto& provider : satellite_providers) {
-            if (isp_name.find(provider) != std::string::npos) {
-                return true;
-            }
+            if (isp_name.find(provider) != std::string::npos) return true;
         }
         return false;
     }
 
 	// Check if IP is an anonymous proxy
     bool is_anonymous_proxy(const json& geo_data) {
-        // Check for anonymous proxy indicators in GeoIP data
         if (geo_data.contains("traits")) {
             const auto& traits = geo_data["traits"];
-            return traits.value("is_anonymous_proxy", false) ||
-                traits.value("is_satellite_provider", false);
+            return traits.value("is_anonymous_proxy", false) || traits.value("is_satellite_provider", false);
         }
         return false;
     }
 
-	// Check if ASN belongs to a known hosting provider
+	// Check if ISP is a known hosting provider
     bool is_hosting_provider(const std::string& isp_name, int asn) {
-        // Common hosting provider keywords
-        std::vector<std::string> hosting_keywords = {
+        static const std::vector<std::string> hosting_keywords = {
             "Amazon", "Google", "Microsoft", "Digital Ocean", "Linode",
             "Vultr", "OVH", "Hetzner", "Contabo", "HostGator", "GoDaddy",
             "Cloudflare", "Akamai", "Fastly", "MaxCDN", "KeyCDN"
         };
-
         for (const auto& keyword : hosting_keywords) {
-            if (isp_name.find(keyword) != std::string::npos) {
-                return true;
-            }
+            if (isp_name.find(keyword) != std::string::npos) return true;
         }
-
-        // Check against known hosting ASNs
-        std::set<int> hosting_asns = {
+        static const std::set<int> hosting_asns = {
             16509, 15169, 8075, 14061, 63949, 20940, 13335, 16276, 24940
         };
 
@@ -1479,11 +1222,9 @@ public:
         else {
             geoip_db_loaded = true;
             std::cout << "Successfully loaded GeoIP database: " << geoip_db_path << std::endl;
-            std::cout << "Database type: " << geoip_db->metadata.database_type << std::endl;
-            std::cout << "Build epoch: " << geoip_db->metadata.build_epoch << std::endl;
         }
 
-        // Open ASN database
+		// Open ASN database
         status = MMDB_open(asn_db_path.c_str(), MMDB_MODE_MMAP, asn_db.get());
         if (status != MMDB_SUCCESS) {
             std::cerr << "Warning: Failed to open ASN database (" << asn_db_path
@@ -1494,32 +1235,27 @@ public:
         else {
             asn_db_loaded = true;
             std::cout << "Successfully loaded ASN database: " << asn_db_path << std::endl;
-            std::cout << "Database type: " << asn_db->metadata.database_type << std::endl;
         }
 
         if (!geoip_db_loaded && !asn_db_loaded) {
             std::cerr << "Warning: No geolocation databases loaded. All geographic analysis will use default/mock values." << std::endl;
         }
     }
-
 	// GeolocationEngine destructor
     ~GeolocationEngine() {
         if (geoip_db && geoip_db_loaded) {
             MMDB_close(geoip_db.get());
-            std::cout << "Closed GeoIP database." << std::endl;
         }
-
         if (asn_db && asn_db_loaded) {
             MMDB_close(asn_db.get());
-            std::cout << "Closed ASN database." << std::endl;
         }
     }
 
-	// Geolocation analysis for a communication event
+	// Analyze communication between source and destination IPs
     GeolocationInfo analyze_communication(const std::string& src_ip, const std::string& dst_ip) {
         GeolocationInfo info;
 
-        // Analyze source IP
+		// Analyze source IP
         json src_geo, src_asn_info;
         if (geoip_db_loaded) {
             src_geo = lookup_ip_geolocation(src_ip);
@@ -1611,44 +1347,6 @@ public:
 
         return info;
     }
-
-    // Utility function to test database functionality
-    bool test_databases() {
-        std::cout << "\n=== GeolocationEngine Database Test ===" << std::endl;
-
-        if (!geoip_db_loaded && !asn_db_loaded) {
-            std::cout << "No databases loaded to test." << std::endl;
-            return false;
-        }
-
-        // Test with known IP addresses
-        std::vector<std::string> test_ips = {
-            "8.8.8.8",      // Google DNS
-            "1.1.1.1",      // Cloudflare DNS  
-            "208.67.222.222" // OpenDNS
-        };
-
-		// Perform lookups and display results
-        for (const auto& ip : test_ips) {
-            std::cout << "\nTesting IP: " << ip << std::endl;
-
-            if (geoip_db_loaded) {
-                auto geo_result = lookup_ip_geolocation(ip);
-                if (!geo_result.empty()) {
-                    std::cout << "  GeoIP: " << geo_result.dump(2) << std::endl;
-                }
-            }
-
-            if (asn_db_loaded) {
-                auto asn_result = lookup_ip_asn(ip);
-                if (!asn_result.empty()) {
-                    std::cout << "  ASN: " << asn_result.dump(2) << std::endl;
-                }
-            }
-        }
-
-        return true;
-    }
 };
 
 // Complete RPC Parser integrating all components
@@ -1661,18 +1359,6 @@ private:
     std::map<std::string, SessionInfo> session_tracker;
     std::mutex session_mutex;
 
-    // Helper methods
-    std::string generate_uuid() {
-        std::stringstream ss;
-        ss << std::hex;
-        for (int i = 0; i < 32; ++i) {
-            ss << (rand() % 16);
-            if (i == 7 || i == 11 || i == 15 || i == 19) ss << "-";
-        }
-        return ss.str();
-    }
-
-	// Get current timestamp in ISO 8601 format
     std::string get_iso8601_timestamp() {
         auto now = std::time(nullptr);
         auto utc = std::gmtime(&now);
@@ -1681,11 +1367,10 @@ private:
         return ss.str();
     }
 
-	// Optimized bytes_to_hex with pre-allocated memory
     inline std::string bytes_to_hex(const uint8_t* data, size_t len) {
         static const char hex_chars[] = "0123456789abcdef";
         std::string result;
-        result.reserve(len * 2); // Pre-allocate memory to avoid reallocations
+        result.reserve(len * 2);
         
         for (size_t i = 0; i < len; ++i) {
             result.push_back(hex_chars[(data[i] >> 4) & 0xF]);
@@ -1694,7 +1379,6 @@ private:
         return result;
     }
 
-	// Compute SHA-256 hash of data
     std::string sha256_hash(const uint8_t* data, size_t len) {
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256(data, len, hash);
@@ -1712,30 +1396,26 @@ private:
         header.auth_length = ntohs(header.auth_length);
         header.call_id = ntohl(header.call_id);
         header.operation_number = ntohs(header.operation_number);
-
         return true;
     }
 
-	// Extract interface UUID from payload
+	// Extract interface UUID from payload at given offset
     std::string extract_interface_uuid(const uint8_t* payload, size_t len, size_t offset) {
         if (len < offset + 16) return "";
 
         std::stringstream ss;
         ss << std::hex << std::setfill('0');
 
-        // Format as standard UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
         for (int i = 0; i < 16; ++i) {
             ss << std::setw(2) << static_cast<unsigned>(payload[offset + i]);
             if (i == 3 || i == 5 || i == 7 || i == 9) ss << "-";
         }
-
         return ss.str();
     }
 
-    // Payload analysis
+	// Analyze payload for sensitive data and encryption
     PayloadAnalysis analyze_payload(const uint8_t* payload, size_t len) {
         PayloadAnalysis analysis;
-
         if (len == 0) return analysis;
 
         std::string payload_str(reinterpret_cast<const char*>(payload), len);
@@ -1749,23 +1429,17 @@ private:
             return analysis;
         }
 
-        // Use pre-compiled malware signatures
+		// Use pre-compiled regex patterns from threat intelligence
         for (const auto& signature : threat_intel.get_malware_signatures()) {
-            const std::regex& pattern = signature.first;
-            const std::string& name = signature.second;
-
-            if (std::regex_search(payload_str, pattern)) {
+            if (std::regex_search(payload_str, signature.first)) {
                 analysis.contains_sensitive_data = true;
-                analysis.suspicious_patterns.push_back(name);
+                analysis.suspicious_patterns.push_back(signature.second);
             }
         }
 
-        // Use pre-compiled string analysis patterns
         for (const auto& pattern_type : threat_intel.get_advanced_string_patterns()) {
-            const auto& pattern = pattern_type.first;
-            const auto& type = pattern_type.second;
-
-            if (std::regex_search(payload_str, pattern)) {
+            if (std::regex_search(payload_str, pattern_type.first)) {
+                const auto& type = pattern_type.second;
                 if (type == "http_url" || type == "ftp_url") {
                     analysis.string_analysis.contains_urls = true;
                 }
@@ -1781,7 +1455,7 @@ private:
         // Unicode detection
         analysis.string_analysis.contains_unicode = has_unicode_strings(payload, len);
 
-        // Additional analysis patterns - compile these as static too
+        // Additional analysis patterns
         static const std::regex registry_regex(R"(HKEY_|\\SOFTWARE\\|\\SYSTEM\\)",
             std::regex_constants::icase | std::regex_constants::optimize);
         static const std::regex credentials_regex(R"(password|username|token|secret)",
@@ -1799,19 +1473,18 @@ private:
         return analysis;
     }
 
-	// Optimized entropy calculation using static array
+	// Entropy calculation using static array
     inline double calculate_entropy(const uint8_t* data, size_t len) {
         if (len == 0) return 0.0;
         
-        // Use static array instead of unordered_map for byte frequency counting
         int counts[256] = {0};
         for (size_t i = 0; i < len; ++i) {
             counts[data[i]]++;
         }
         
         double entropy = 0.0;
-        const double log2_value = std::log(2.0); // Pre-calculate once
-        const double len_inv = 1.0 / len;        // Pre-calculate 1/len
+        const double log2_value = std::log(2.0); 
+        const double len_inv = 1.0 / len;        
         
         for (int i = 0; i < 256; ++i) {
             if (counts[i] > 0) {
@@ -1822,20 +1495,18 @@ private:
         return entropy;
     }
 
-	// Simple check for Unicode strings (UTF-16)
+	// Simple heuristic for Unicode detection
     bool has_unicode_strings(const uint8_t* data, size_t len) {
-        // Simple check for UTF-16 patterns (every other byte is 0)
         int null_count = 0;
         for (size_t i = 1; i < len; i += 2) {
             if (data[i] == 0) null_count++;
         }
-        return (null_count > len / 4); // More than 25% null bytes in even positions
+        return (null_count > len / 4);
     }
 
-    // Authentication context parsing
+	// Parse authentication context from payload
     AuthInfo parse_auth_context(const uint8_t* payload, size_t len) {
         AuthInfo auth_info;
-
         if (len == 0) return auth_info;
 
         std::string payload_str(reinterpret_cast<const char*>(payload), len);
@@ -1853,46 +1524,38 @@ private:
                     auth_info.auth_level = "packet_integrity";
                     auth_info.impersonation_level = "impersonation";
                 }
-                else if (auth_type.find("kerberos") != std::string::npos) {
+                else if (pair.second.find("kerberos") != std::string::npos) {
                     auth_info.auth_type = "Kerberos";
                     auth_info.auth_level = "packet_privacy";
                     auth_info.impersonation_level = "delegation";
                 }
 
-                // Set   authentication indicators
-                auth_info.bypass_detected = (auth_type.find("bypass") != std::string::npos ||
-                    auth_type.find("injection") != std::string::npos ||
-                    auth_type.find("brute") != std::string::npos);
+                auth_info.bypass_detected = (pair.second.find("bypass") != std::string::npos ||
+                    pair.second.find("injection") != std::string::npos ||
+                    pair.second.find("brute") != std::string::npos);
                 auth_info.suspicious_auth = auth_info.bypass_detected;
-
                 break;
             }
         }
-
         return auth_info;
     }
 
-    // SMB layer parsing for named pipe transport
+	// Parse SMB layer for session and named pipe info
     SMBInfo parse_smb_layer(const uint8_t* payload, size_t len) {
         SMBInfo smb_info;
 
-        // Look for SMB2/3 header signature (0xFE 'SMB')
         if (len >= 4 && payload[0] == 0xFE && payload[1] == 'S' &&
             payload[2] == 'M' && payload[3] == 'B') {
 
             smb_info.is_smb_transport = true;
 
-            // Parse SMB2 header (simplified)
             if (len >= 64) {
-                // Session ID at offset 44-51 in SMB2 header
                 memcpy(&smb_info.session_id, payload + 44, 4);
                 smb_info.session_id = ntohl(smb_info.session_id);
 
-                // Tree ID at offset 40-43
                 memcpy(&smb_info.tree_id, payload + 40, 2);
                 smb_info.tree_id = ntohs(smb_info.tree_id);
 
-                // Look for IPC$ or named pipe indicators - use static compiled regex
                 static const std::regex pipe_regex(R"(\\pipe\\([a-zA-Z0-9_]+))",
                     std::regex_constants::icase | std::regex_constants::optimize);
 
@@ -1903,14 +1566,12 @@ private:
                 }
             }
         }
-
         return smb_info;
     }
 
-    // Session tracking and correlation
+	// Track sessions for correlation
     SessionInfo& track_session(const std::string& src_ip, int src_port,
-        const std::string& dst_ip, int dst_port,
-        uint32_t call_id) {
+        const std::string& dst_ip, int dst_port, uint32_t call_id) {
 
         std::string session_key = src_ip + ":" + std::to_string(src_port) +
             "->" + dst_ip + ":" + std::to_string(dst_port);
@@ -1937,10 +1598,9 @@ private:
         }
     }
 
-	// Direction determination with geolocation context
+	// Determine communication direction based on geolocation info
     std::string determine_direction_with_geo(const std::string& src_ip, const std::string& dst_ip,
         const GeolocationEngine::GeolocationInfo& geo_info) {
-        //   direction analysis with geographic context
         if (geo_info.is_internal_communication) {
             if (geo_info.source_network_zone == "management" || geo_info.destination_network_zone == "management") {
                 return "management";
@@ -1948,33 +1608,23 @@ private:
             return "lateral";
         }
 
-        if (geo_info.source_network_zone == "external") {
-            return "inbound";
-        }
-
-        if (geo_info.destination_network_zone == "external") {
-            return "outbound";
-        }
-
+        if (geo_info.source_network_zone == "external") return "inbound";
+        if (geo_info.destination_network_zone == "external") return "outbound";
         return "unknown";
     }
 
-	// Map RPC packet type to event type
+	// Map packet type to event type
     std::string get_event_type_from_packet(uint8_t packet_type) {
-        // Map RPC packet types to event types
         switch (packet_type) {
         case 0:  return "rpc_request";
         case 2:  return "rpc_response";
-        case 11: return "rpc_bind";
-        case 12: return "rpc_bind";  // bind_ack is still a bind event
-        case 13: return "rpc_bind";  // bind_nak is still a bind event
+        case 11: case 12: case 13: case 14: return "rpc_bind";
         case 3:  return "rpc_fault";
-        case 14: return "rpc_bind";  // alter_context is bind-related
-        default: return "rpc_request"; // Default fallback
+        default: return "rpc_request";
         }
     }
 
-	// Comprehensive severity calculation
+	// Calculate overall severity score
     std::string calculate_severity(const std::string& geographic_risk,
         const std::vector<std::string>& suspicious_patterns,
         const AuthInfo& auth_info,
@@ -1983,43 +1633,31 @@ private:
         const std::string& direction,
         int threat_intel_risk_score) {
 
-        int severity_score = 0;
+        int severity_score = (threat_intel_risk_score * 0.5);
 
-        // Use threat intelligence risk score as primary factor (0-50 points)
-        severity_score += (threat_intel_risk_score * 0.5);
-
-        // Geographic risk contribution (0-20 points)
         if (geographic_risk == "critical") severity_score += 20;
         else if (geographic_risk == "high") severity_score += 15;
         else if (geographic_risk == "medium") severity_score += 8;
         else if (geographic_risk == "low") severity_score += 2;
 
-        // Authentication risk contribution (0-15 points)
         if (auth_info.bypass_detected) severity_score += 15;
         else if (auth_info.suspicious_auth) severity_score += 10;
         else if (auth_info.auth_type == "None" && direction == "inbound") severity_score += 8;
 
-        // High-value interface targeting (0-15 points)
-        if (interface_name == "Service Control Manager" ||
-            interface_name == "DRSUAPI" ||
-            interface_name == "LSASS" ||
-            interface_name == "Print Spooler") {
+        if (interface_name == "Service Control Manager" || interface_name == "DRSUAPI" ||
+            interface_name == "LSASS" || interface_name == "Print Spooler") {
             severity_score += 15;
         }
-        else if (interface_name == "Task Scheduler" ||
-            interface_name == "Registry" ||
-            interface_name == "SAMR") {
+        else if (interface_name == "Task Scheduler" || interface_name == "Registry" || interface_name == "SAMR") {
             severity_score += 10;
         }
 
-        // Calculate final severity based on total score
         if (severity_score >= 80) return "critical";
         else if (severity_score >= 60) return "high";
         else if (severity_score >= 30) return "medium";
         else return "low";
     }
 
-// UUID to interface name mapping
 public:
     CompleteRPCParser(const std::string& geoip_db_path, const std::string& asn_db_path) {
         try {
@@ -2033,7 +1671,6 @@ public:
 
 	// Main packet parsing function
     json parse_packet(const uint8_t* packet_data, size_t packet_len) {
-        // Parse with PcapPlusPlus
         timeval packetTime;
         std::time_t now = std::time(nullptr);
         packetTime.tv_sec = static_cast<long>(now);
@@ -2041,17 +1678,14 @@ public:
         pcpp::RawPacket rawPacket(packet_data, packet_len, packetTime, false);
         pcpp::Packet parsedPacket(&rawPacket);
 
-        // Initialize JSON structure
         json event = { {"rpc_packet_analysis", {}} };
         auto& rpc_analysis = event["rpc_packet_analysis"];
 
-        // Basic network parsing
         std::string src_ip = "0.0.0.0", dst_ip = "0.0.0.0", protocol = "unknown";
         int src_port = 0, dst_port = 0;
-        
-        // Validate network layer exists
         bool has_valid_network_layer = false;
-        
+		
+        // Extract network layer information
         if (parsedPacket.isPacketOfType(pcpp::IPv4)) {
             auto ipv4Layer = parsedPacket.getLayerOfType<pcpp::IPv4Layer>();
             if (ipv4Layer != nullptr) {
@@ -2069,7 +1703,6 @@ public:
             }
         }
         
-        // Validate transport layer exists
         if (parsedPacket.isPacketOfType(pcpp::TCP)) {
             auto tcpLayer = parsedPacket.getLayerOfType<pcpp::TcpLayer>();
             if (tcpLayer != nullptr) {
@@ -2087,7 +1720,7 @@ public:
             }
         }
 
-        // Perform geolocation analysis only if we have valid IPs
+		// Geolocation analysis
         GeolocationEngine::GeolocationInfo geo_info;
         if (geo_engine && has_valid_network_layer && 
             src_ip != "0.0.0.0" && dst_ip != "0.0.0.0") {
@@ -2095,11 +1728,9 @@ public:
                 geo_info = geo_engine->analyze_communication(src_ip, dst_ip);
             } catch (const std::exception& e) {
                 std::cerr << "Geolocation analysis failed: " << e.what() << std::endl;
-                // Continue with default geo_info values
             }
         }
         
-        //   network information with direction analysis
         std::string direction = determine_direction_with_geo(src_ip, dst_ip, geo_info);
 
         rpc_analysis["network_information"] = {
@@ -2111,7 +1742,6 @@ public:
             {"direction", direction}
         };
 
-        // Initialize variables for   event metadata
         std::string event_type = "rpc_request";
         std::string severity = "low";
         std::string interface_name = "Unknown";
@@ -2123,19 +1753,16 @@ public:
             const uint8_t* payload = payloadLayer->getPayload();
             size_t payload_len = payloadLayer->getPayloadLen();
 
-            // Parse RPC details with   interface/operation mapping
             DCERPCHeader rpc_header = {};
             std::string interface_uuid;
 
             if (parse_dcerpc_header(payload, payload_len, rpc_header)) {
-                // Get proper event type from RPC packet type
                 event_type = get_event_type_from_packet(rpc_header.packet_type);
 
                 interface_uuid = extract_interface_uuid(payload, payload_len, sizeof(DCERPCHeader));
                 interface_name = uuid_to_interface.count(interface_uuid) ?
                     uuid_to_interface[interface_uuid] : "Unknown";
 
-                //   operation name lookup
                 if (operation_mappings.count(interface_uuid) &&
                     operation_mappings[interface_uuid].count(rpc_header.operation_number)) {
                     operation_name = operation_mappings[interface_uuid][rpc_header.operation_number];
@@ -2144,7 +1771,6 @@ public:
                 call_id = rpc_header.call_id;
             }
 
-			// Map fragment flags to descriptive strings
             std::vector<std::string> fragment_flags;
             if (rpc_header.fragment_flags & 0x01) fragment_flags.push_back("first_fragment");
             if (rpc_header.fragment_flags & 0x02) fragment_flags.push_back("last_fragment");
@@ -2160,7 +1786,6 @@ public:
                 {"fragment_flags", fragment_flags}
             };
 
-            // Transport context with SMB parsing
             SMBInfo smb_info = parse_smb_layer(payload, payload_len);
 
             rpc_analysis["transport_context"] = {
@@ -2170,7 +1795,6 @@ public:
                 {"smb_session_id", smb_info.session_id}
             };
 
-            //Authentication context
             AuthInfo auth_info = parse_auth_context(payload, payload_len);
 
             rpc_analysis["authentication_context"] = {
@@ -2180,7 +1804,6 @@ public:
                 {"impersonation_level", auth_info.impersonation_level}
             };
 
-            //Payload analysis
             PayloadAnalysis payload_analysis = analyze_payload(payload, payload_len);
 
             rpc_analysis["payload_analysis"] = {
@@ -2200,7 +1823,7 @@ public:
                 }}
             };
 
-			// Threat Intelligence integration
+   			// Threat Intelligence integration
             auto threat_result = threat_intel_engine.analyze_threat(
                 interface_uuid,
                 rpc_header.operation_number,
@@ -2334,9 +1957,7 @@ int main(int argc, char* argv[]) {
                         return json();
                     }
 
-                    // Parse the packet
                     json result = parser.parse_packet(packet_data.data(), packet_data.size());
-
                     std::cout << "Completed processing: " << packet_file << std::endl;
                     return result;
                 }
@@ -2397,4 +2018,4 @@ int main(int argc, char* argv[]) {
     }
 
     return 0;
-}
+}   
